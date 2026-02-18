@@ -1,0 +1,104 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunlight Hotel Requisitions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Great+Vibes&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb; /* gray-50 / zinc-50 */
+            color: #18181b; /* zinc-900 */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .maroon-bg { background-color: #5d0000; }
+        .maroon-text { color: #5d0000; }
+        .maroon-border { border-color: #5d0000; }
+        
+        /* Metallic Gold palette */
+        .gold-bg { background-color: #D4AF37; }
+        .gold-text { color: #D4AF37; }
+        .yellow-bg { background-color: #D4AF37; } /* Mapping old yellow to gold */
+        .yellow-text { color: #D4AF37; }
+        
+        .maroon-accent-bg { background-color: #3d0000; } 
+        .dark-gray-bg { background-color: #18181b; } /* zinc-900 */
+        
+        /* Sunlight Logo Refined Typography */
+        .logo-sunlight {
+            font-family: 'Vivaldi', 'Great Vibes', cursive;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+        }
+        .logo-hotel {
+            letter-spacing: 0.4em;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Custom scrollbar for light theme */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e4e4e7; /* zinc-200 */
+            border-radius: 10px;
+        }
+
+        /* Smooth transition for active state */
+        .transition-all {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 150ms;
+        }
+
+        /* Splash animation */
+        @keyframes flourish {
+            0% { opacity: 0; transform: scale(0.9) translateY(10px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-flourish {
+            animation: flourish 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.564.0",
+    "recharts": "https://esm.sh/recharts@^3.7.0",
+    "@libsql/client": "https://esm.sh/@libsql/client@^0.17.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
+    
