@@ -1,8 +1,21 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { InventoryItem, Requisition, Department, RequisitionItem, RemarkType } from '../types';
-import { Plus, Trash2, Send, Search, X, Layers, Lock, AlertTriangle, ChevronDown, CalendarDays } from 'lucide-react';
+import { Plus, Trash2, Send, Search, X, Layers, Lock, AlertTriangle, ChevronDown, CalendarDays, CheckCircle2 } from 'lucide-react';
 import { DEPARTMENTS } from '../constants';
+import { z } from 'zod';
+import { toast } from 'sonner';
+
+const requisitionSchema = z.object({
+  requester: z.string().min(2, "Requester name must be at least 2 characters"),
+  department: z.string().min(1, "Please select a department in settings"),
+  remarks: z.enum(['Urgent', 'PAR Stock', 'Event Stock']),
+  eventDate: z.string().optional().refine((date) => {
+    if (!date) return true;
+    return new Date(date) >= new Date(new Date().setHours(0, 0, 0, 0));
+  }, "Event date cannot be in the past"),
+  items: z.array(z.any()).min(1, "At least one item is required")
+});
 
 interface RequisitionFormProps {
   onSubmit: (requisition: Requisition) => void;
@@ -24,9 +37,14 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
   const [newItemUnit, setNewItemUnit] = useState('UNITS');
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  
   const searchInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const formEndRef = useRef<HTMLDivElement>(null);
+
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   useEffect(() => {
     setDepartment(defaultDepartment || "");
@@ -117,56 +135,81 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
     return codes[dept] || dept.substring(0, 3).toUpperCase();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (items.length === 0 || !requester || !department) return;
-    if (remarks === 'Event Stock' && !eventDate) return;
-
-    // Filter items by source to split them if necessary
-    const warehouseItems = items.filter(i => i.source === 'Warehouse');
-    const purchaseItems = items.filter(i => i.source === 'Purchase');
     
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const deptCode = getDepartmentCode(department);
-    
-    // Count existing requisitions for this department in this month
-    const existingCount = requisitions.filter(r => {
-      if (r.department !== department) return false;
-      const rDate = new Date(r.date);
-      return rDate.getFullYear() === year && rDate.getMonth() === now.getMonth();
-    }).length;
+    const validation = requisitionSchema.safeParse({
+      requester,
+      department,
+      remarks,
+      eventDate: remarks === 'Event Stock' ? eventDate : undefined,
+      items
+    });
 
-    let offset = 1;
-
-    // Helper to generate and submit
-    const createAndSubmit = (reqItems: RequisitionItem[]) => {
-      const sequence = String(existingCount + offset).padStart(4, '0');
-      const newId = `SGHC ${deptCode}-${year}-${month}-${sequence}`;
-
-      const requisition: Requisition = {
-        id: newId,
-        department: department as Department,
-        requester: requester.toUpperCase(),
-        date: now.toISOString().split('T')[0],
-        items: reqItems,
-        status: 'Pending',
-        remarks,
-        description,
-        eventDate: remarks === 'Event Stock' ? eventDate : undefined
-      };
-
-      onSubmit(requisition);
-      offset++;
-    };
-
-    if (warehouseItems.length > 0) {
-      createAndSubmit(warehouseItems);
+    if (!validation.success) {
+      const errorMsg = validation.error.issues[0].message;
+      toast.error(errorMsg);
+      return;
     }
 
-    if (purchaseItems.length > 0) {
-      createAndSubmit(purchaseItems);
+    setShowConfirm(true);
+  };
+
+  const confirmSubmit = async () => {
+    setIsSubmitting(true);
+    setShowConfirm(false);
+    
+    try {
+      // Filter items by source to split them if necessary
+      const warehouseItems = items.filter(i => i.source === 'Warehouse');
+      const purchaseItems = items.filter(i => i.source === 'Purchase');
+      
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const deptCode = getDepartmentCode(department);
+      
+      // Count existing requisitions for this department in this month
+      const existingCount = requisitions.filter(r => {
+        if (r.department !== department) return false;
+        const rDate = new Date(r.date);
+        return rDate.getFullYear() === year && rDate.getMonth() === now.getMonth();
+      }).length;
+
+      let offset = 1;
+
+      // Helper to generate and submit
+      const createAndSubmit = (reqItems: RequisitionItem[]) => {
+        const sequence = String(existingCount + offset).padStart(4, '0');
+        const newId = `SGHC ${deptCode}-${year}-${month}-${sequence}`;
+
+        const requisition: Requisition = {
+          id: newId,
+          department: department as Department,
+          requester: requester.toUpperCase(),
+          date: now.toISOString().split('T')[0],
+          items: reqItems,
+          status: 'Pending',
+          remarks,
+          description,
+          eventDate: remarks === 'Event Stock' ? eventDate : undefined
+        };
+
+        onSubmit(requisition);
+        offset++;
+      };
+
+      if (warehouseItems.length > 0) {
+        createAndSubmit(warehouseItems);
+      }
+
+      if (purchaseItems.length > 0) {
+        createAndSubmit(purchaseItems);
+      }
+    } catch (error) {
+      toast.error("Failed to submit requisition");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -235,6 +278,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                   <input 
                     required
                     type="date"
+                    min={today}
                     value={eventDate}
                     onChange={e => setEventDate(e.target.value)}
                     onFocus={handleFocus}
@@ -273,7 +317,14 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                     placeholder="SEARCH FOR ITEMS..."
                   />
                   {(searchQuery || newItemName) && (
-                    <button type="button" onClick={() => { setSearchQuery(''); setNewItemName(''); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-red-500"><X size={14} /></button>
+                    <button 
+                    type="button" 
+                    onClick={() => { setSearchQuery(''); setNewItemName(''); }} 
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-red-500"
+                    aria-label="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
                   )}
                 </div>
 
@@ -328,6 +379,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                 <button 
                   type="button" onClick={addItem} disabled={!newItemName || !newItemQty || (typeof newItemQty === 'number' && newItemQty <= 0)}
                   className="w-[46px] h-[46px] bg-yellow-400 border border-yellow-500 hover:bg-yellow-500 text-[#5d0000] rounded-xl active:scale-95 disabled:opacity-50 disabled:bg-zinc-100 disabled:border-zinc-200 disabled:text-zinc-300 transition-all flex items-center justify-center shadow-lg group"
+                  aria-label="Add item to list"
                 >
                   <Plus size={24} strokeWidth={4} className="transition-transform group-hover:rotate-90" />
                 </button>
@@ -363,7 +415,12 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                             <span className="text-[9px] text-zinc-400 font-black uppercase tracking-[0.2em]">{item.unit}</span>
                           </div>
                         </div>
-                        <button type="button" onClick={() => removeItem(item.id)} className="text-zinc-300 hover:text-red-500 transition-colors p-2 hover:bg-white rounded-lg">
+                        <button 
+                          type="button" 
+                          onClick={() => removeItem(item.id)} 
+                          className="text-zinc-300 hover:text-red-500 transition-colors p-2 hover:bg-white rounded-lg"
+                          aria-label={`Remove ${item.name}`}
+                        >
                             <Trash2 size={16} />
                         </button>
                       </div>
@@ -382,14 +439,51 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
         {items.length > 0 && (
           <button 
             type="submit"
-            disabled={!department}
+            disabled={!department || isSubmitting}
             className="w-full py-4 bg-[#3d0000] text-[#fbbf24] rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl hover:shadow-2xl hover:translate-y-[-1px] active:translate-y-[1px] active:scale-[0.99] transition-all flex items-center justify-center gap-3 border border-white/5 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
           >
-            <Send size={16} strokeWidth={3} className="rotate-[-10deg]" />
-            Initialize Requisition
+            {isSubmitting ? (
+              <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send size={16} strokeWidth={3} className="rotate-[-10deg]" />
+            )}
+            {isSubmitting ? 'Processing...' : 'Initialize Requisition'}
           </button>
         )}
       </form>
+
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl border border-zinc-100 animate-in zoom-in-95 duration-300">
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertTriangle size={32} />
+              </div>
+              <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight mb-2">Confirm Requisition</h3>
+              <p className="text-zinc-500 text-xs font-medium leading-relaxed">
+                You are about to submit <span className="font-black text-zinc-800">{items.length} items</span> for <span className="font-black text-zinc-800">{department}</span>. This action will notify the purchasing department.
+              </p>
+            </div>
+            <div className="flex border-t border-zinc-100">
+              <button 
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 py-5 text-zinc-400 text-[10px] font-black uppercase tracking-widest hover:bg-zinc-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmSubmit}
+                className="flex-1 py-5 bg-[#3d0000] text-yellow-400 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 size={14} />
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div ref={formEndRef} />
     </div>
   );

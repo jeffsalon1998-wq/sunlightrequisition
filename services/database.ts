@@ -4,12 +4,12 @@ import { InventoryItem, Requisition, Department } from "../types";
 import { INITIAL_REQUISITIONS } from "../constants";
 
 // 1. Stock Registry Database (Read-only for this app)
-const STOCK_URL = "libsql://database-red-tree-vercel-icfg-tf7wnf43zngjwvbur4t9rp6n.aws-us-east-1.turso.io";
-const STOCK_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzA4ODM2NDEsImlkIjoiZGUyZjlkZTgtOTEzYS00YzE1LThlMzMtMzhlYTMzMGFkNzI5IiwicmlkIjoiYzNhZDBiYmMtNTI0My00NTc2LTkwYzQtYjNjZDdmZGU1ZmM3In0.8gOpqGrKkuO5LTP8PvBWZJjMskckorIyyPedTVeIZHSXqCtebkp2AQvl-2VPRZchEtizL8MJxQTZR2Da4tj4CQ";
+const STOCK_URL = import.meta.env.VITE_STOCK_DB_URL || "libsql://database-red-tree-vercel-icfg-tf7wnf43zngjwvbur4t9rp6n.aws-us-east-1.turso.io";
+const STOCK_TOKEN = import.meta.env.VITE_STOCK_DB_TOKEN || "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzA4ODM2NDEsImlkIjoiZGUyZjlkZTgtOTEzYS00YzE1LThlMzMtMzhlYTMzMGFkNzI5IiwicmlkIjoiYzNhZDBiYmMtNTI0My00NTc2LTkwYzQtYjNjZDdmZGU1ZmM3In0.8gOpqGrKkuO5LTP8PvBWZJjMskckorIyyPedTVeIZHSXqCtebkp2AQvl-2VPRZchEtizL8MJxQTZR2Da4tj4CQ";
 
 // 2. Requisitions Database (Read/Write)
-const REQ_URL = "libsql://prrequest-vercel-icfg-tf7wnf43zngjwvbur4t9rp6n.aws-us-east-1.turso.io";
-const REQ_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzEwNjA0NDEsImlkIjoiNTEyODlkNzQtYzhjNi00YzllLTg2YjYtNjk1MTZlY2ZjNDgzIiwicmlkIjoiMzQyNmUyODUtYjhlNS00OWI2LWE0ZDktNDFmZTQ3MzE0ZjNjIn0.rqlTsVVTqoMowmh-2XO9pptsb77qdThUvOvyH95KNsTkCUaOKiO2DwHMnl72qET3ORXfFyHjELmyTu4rLMKuDA";
+const REQ_URL = import.meta.env.VITE_REQ_DB_URL || "libsql://prrequest-vercel-icfg-tf7wnf43zngjwvbur4t9rp6n.aws-us-east-1.turso.io";
+const REQ_TOKEN = import.meta.env.VITE_REQ_DB_TOKEN || "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzEwNjA0NDEsImlkIjoiNTEyODlkNzQtYzhjNi00YzllLTg2YjYtNjk1MTZlY2ZjNDgzIiwicmlkIjoiMzQyNmUyODUtYjhlNS00OWI2LWE0ZDktNDFmZTQ3MzE0ZjNjIn0.rqlTsVVTqoMowmh-2XO9pptsb77qdThUvOvyH95KNsTkCUaOKiO2DwHMnl72qET3ORXfFyHjELmyTu4rLMKuDA";
 
 export const stockClient = createClient({
   url: STOCK_URL,
@@ -192,7 +192,7 @@ export const verifyAdminPassword = async (password: string): Promise<boolean> =>
     if (result.rows.length > 0) {
       return String(result.rows[0].value) === password;
     }
-    return password === 'luxe123'; // Fallback
+    return password === (import.meta.env.VITE_ADMIN_PASSWORD || 'luxe123'); // Fallback
   } catch (error) {
     console.error("Error verifying password:", error);
     return false;

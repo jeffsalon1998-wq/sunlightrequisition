@@ -20,7 +20,8 @@ import {
   PenTool,
   HelpCircle,
   Cloud,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { InventoryItem, Requisition, Department } from './types';
 import Dashboard from './components/Dashboard';
@@ -28,16 +29,17 @@ import RequisitionList from './components/RequisitionList';
 import RequisitionForm from './components/RequisitionForm';
 import Inventory from './components/Inventory';
 import Settings from './components/Settings';
+import { SunlightTextLogo } from './src/components/SunlightTextLogo';
+import { useDatabaseInit } from './src/hooks/useDatabaseInit';
 import { 
-  initDatabase, 
-  getInventory, 
-  getRequisitions, 
-  getDepartmentsFromConfig,
   saveRequisitionDb, 
   updateRequisitionDb, 
   updateStatusDb 
 } from './services/database';
-import { DEPARTMENTS } from './constants';
+import { Toaster, toast } from 'sonner';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 type View = 'dashboard' | 'requisitions' | 'new-request' | 'inventory' | 'settings';
 
@@ -75,28 +77,6 @@ function MobileNavItem({ icon, label, active, onClick }: { icon: React.ReactNode
     </button>
   );
 }
-
-const SunlightTextLogo = ({ light = false, collapsed = false, isMobile = false }) => {
-  const textColor = light ? 'gold-text' : 'text-amber-500';
-  const subtextColor = light ? 'gold-text opacity-70' : 'maroon-text opacity-60';
-  
-  return (
-    <div className={`flex flex-col items-center select-none transition-all duration-500 ease-in-out ${collapsed ? 'px-1' : ''}`}>
-      <div className="flex flex-col items-center">
-        <span className={`logo-sunlight leading-tight transition-all duration-500 ${textColor} ${
-          isMobile ? 'text-3xl' : (collapsed ? 'text-2xl scale-110' : 'text-[5rem]')
-        }`}>
-          Sunlight
-        </span>
-        <span className={`logo-hotel uppercase transition-all duration-500 whitespace-nowrap ${subtextColor} ${
-          isMobile ? 'text-[7px] -mt-1' : (collapsed ? 'text-[5px] tracking-[0.2em] -mt-1' : 'text-[11px] -mt-4 tracking-[0.5em]')
-        }`}>
-          Hotel, Coron
-        </span>
-      </div>
-    </div>
-  );
-};
 
 const SplashScreen = ({ onEnter, ready }: { onEnter: () => void; ready: boolean }) => (
   <div className="fixed inset-0 z-[100] bg-[#1a0000] flex flex-col items-center justify-center overflow-hidden">
@@ -150,59 +130,72 @@ const SplashScreen = ({ onEnter, ready }: { onEnter: () => void; ready: boolean 
 );
 
 export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppContent />
+      <Toaster position="top-right" richColors />
+    </QueryClientProvider>
+  );
+}
+
+function AppContent() {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [requisitions, setRequisitions] = useState<Requisition[]>([]);
-  const [availableDepartments, setAvailableDepartments] = useState<Department[]>([...DEPARTMENTS]);
+  
+  const { 
+    inventory, 
+    setInventory, 
+    requisitions, 
+    setRequisitions, 
+    availableDepartments, 
+    setAvailableDepartments, 
+    isLoading,
+    refresh: handleCloudSync
+  } = useDatabaseInit();
+
   // DEFAULT DEPARTMENT SET TO NULL (BLANK)
-  const [defaultDept, setDefaultDept] = useState<Department | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [defaultDept, setDefaultDept] = useState<Department | null>(() => {
+    const saved = localStorage.getItem('sunlight_default_dept');
+    return saved ? (saved as Department) : null;
+  });
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+    const saved = localStorage.getItem('sunlight_is_admin');
+    return saved === 'true';
+  });
+
+  // Persist settings
+  useEffect(() => {
+    if (defaultDept) {
+      localStorage.setItem('sunlight_default_dept', defaultDept);
+    } else {
+      localStorage.removeItem('sunlight_default_dept');
+    }
+  }, [defaultDept]);
+
+  useEffect(() => {
+    localStorage.setItem('sunlight_is_admin', String(isAdmin));
+  }, [isAdmin]);
+
   const [isSplashActive, setIsSplashActive] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Filter notifications only for specific statuses and active department
   const deptNotifications = requisitions.filter(r => 
     defaultDept && r.department === defaultDept && (r.status === 'For signing' || r.status === 'Ready for Pickup')
   );
   const unreadCount = deptNotifications.length;
+  const prevUnreadCount = useRef(unreadCount);
 
+  // Request notification permission and initialize audio
   useEffect(() => {
-    const loadData = async () => {
-      const startTime = Date.now();
-      setIsLoading(true);
-      
-      try {
-        await initDatabase();
-        const [invData, reqData, deptData] = await Promise.all([
-          getInventory(),
-          getRequisitions(),
-          getDepartmentsFromConfig()
-        ]);
-        setInventory(invData);
-        setRequisitions(reqData);
-        if (deptData && deptData.length > 0) {
-          setAvailableDepartments(deptData);
-        }
-      } catch (error) {
-        console.error("Failed to load initial data:", error);
-      } finally {
-        const elapsed = Date.now() - startTime;
-        const minimumWait = 2500; // Slightly longer for premium feel
-        const delay = Math.max(0, minimumWait - elapsed);
-        
-        setTimeout(() => {
-          setIsLoading(false);
-        }, delay);
-      }
-    };
-    loadData();
-  }, []);
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      Notification.requestPermission();
+    }
+    audioRef.current = new Audio('/chime.wav');
 
-  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
         setShowNotifications(false);
@@ -212,21 +205,36 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleCloudSync = async () => {
+  // Trigger browser notifications and chime
+  useEffect(() => {
+    if (unreadCount > prevUnreadCount.current && Notification.permission === 'granted') {
+      if (audioRef.current) {
+        audioRef.current.play().catch(e => console.error("Error playing audio:", e));
+      }
+      deptNotifications.forEach(req => {
+        if (req.status === 'For signing') {
+          new Notification('New Requisition for Signing', {
+            body: `Requisition ${req.id} from ${req.requester} needs your signature.`,
+            icon: '/notification-icon.png' // You might need to create this icon
+          });
+        } else if (req.status === 'Ready for Pickup') {
+          new Notification('Requisition Ready for Pickup', {
+            body: `Requisition ${req.id} from ${req.requester} is ready for collection.`, 
+            icon: '/notification-icon.png'
+          });
+        }
+      });
+    }
+    prevUnreadCount.current = unreadCount;
+  }, [unreadCount, deptNotifications]);
+
+  const handleSync = async () => {
     setIsSyncing(true);
     try {
-      const [invData, reqData, deptData] = await Promise.all([
-        getInventory(),
-        getRequisitions(),
-        getDepartmentsFromConfig()
-      ]);
-      setInventory(invData);
-      setRequisitions(reqData);
-      if (deptData && deptData.length > 0) {
-        setAvailableDepartments(deptData);
-      }
+      await handleCloudSync();
+      toast.success('System synchronized with cloud');
     } catch (error) {
-      console.error("Cloud sync failed:", error);
+      toast.error('Sync failed. Please check connection.');
     } finally {
       setTimeout(() => setIsSyncing(false), 800);
     }
@@ -237,7 +245,9 @@ export default function App() {
     setActiveView('requisitions');
     try {
       await saveRequisitionDb(req);
+      toast.success('Requisition submitted successfully');
     } catch (err) {
+      toast.error('Failed to save requisition');
       console.error("Failed to save requisition to DB:", err);
     }
   };
@@ -246,7 +256,9 @@ export default function App() {
     setRequisitions(prev => prev.map(r => r.id === id ? { ...r, status } : r));
     try {
       await updateStatusDb(id, status);
+      toast.info(`Status updated to ${status}`);
     } catch (err) {
+      toast.error('Status update failed');
       console.error("Failed to update status in DB:", err);
     }
   };
@@ -255,7 +267,9 @@ export default function App() {
     setRequisitions(prev => prev.map(r => r.id === updatedReq.id ? updatedReq : r));
     try {
       await updateRequisitionDb(updatedReq);
+      toast.success('Requisition updated');
     } catch (err) {
+      toast.error('Update failed');
       console.error("Failed to update requisition in DB:", err);
     }
   };
@@ -282,7 +296,11 @@ export default function App() {
         </nav>
 
         <div className="p-3 border-t border-zinc-800/40">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="w-full flex items-center justify-center p-2 rounded-xl hover:bg-zinc-800 transition-all active:scale-90 group">
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+            className="w-full flex items-center justify-center p-2 rounded-xl hover:bg-zinc-800 transition-all active:scale-90 group"
+            aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          >
             {isSidebarOpen ? <X size={18} className="text-zinc-600 group-hover:text-yellow-400" /> : <Menu size={18} className="text-zinc-600 group-hover:text-yellow-400" />}
           </button>
         </div>
@@ -303,10 +321,11 @@ export default function App() {
 
           <div className="flex items-center gap-3 md:gap-6">
             <button 
-              onClick={handleCloudSync}
+              onClick={handleSync}
               disabled={isSyncing}
               className={`relative text-zinc-400 hover:text-maroon-bg transition-all p-2 hover:bg-zinc-100 rounded-full group ${isSyncing ? 'cursor-not-allowed opacity-70' : ''}`}
               title="Cloud Sync"
+              aria-label="Synchronize with cloud"
             >
               <Cloud size={20} />
               <div className="absolute -top-0.5 -right-0.5 bg-white rounded-full p-[1px]">
@@ -323,6 +342,7 @@ export default function App() {
                 disabled={!defaultDept}
                 onClick={() => setShowNotifications(!showNotifications)}
                 className={`relative text-zinc-400 hover:text-maroon-bg transition-all p-2 hover:bg-zinc-100 rounded-full ${unreadCount > 0 ? 'animate-pulse' : ''} ${!defaultDept ? 'opacity-20 cursor-not-allowed' : ''}`}
+                aria-label={`${unreadCount} notifications`}
               >
                 <Bell size={20} />
                 {unreadCount > 0 && (
@@ -332,42 +352,8 @@ export default function App() {
                 )}
               </button>
 
-              {showNotifications && defaultDept && (
-                <div className="absolute right-0 mt-3 w-72 bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300 z-50">
-                  <div className="p-3 bg-zinc-50 border-b border-zinc-100 flex justify-between items-center">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{defaultDept} Alerts</span>
-                    <span className="text-[8px] font-bold text-maroon-bg">{unreadCount} New</span>
-                  </div>
-                  <div className="max-h-80 overflow-y-auto custom-scrollbar">
-                    {deptNotifications.length > 0 ? (
-                      deptNotifications.map((n) => (
-                        <div key={n.id} className="p-3 border-b border-zinc-50 hover:bg-zinc-50 transition-colors flex gap-2">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${n.status === 'Ready for Pickup' ? 'bg-amber-50 text-amber-600' : 'bg-purple-50 text-purple-700'}`}>
-                            {n.status === 'Ready for Pickup' ? <AlertCircle size={12} /> : <PenTool size={12} />}
-                          </div>
-                          <div>
-                            <p className="text-[11px] font-bold text-zinc-800">{n.requester}</p>
-                            <p className="text-[9px] text-zinc-500 mt-0.5 leading-tight">
-                              {n.status === 'Ready for Pickup' ? 'Item ready for collection' : 'Action required: Awaiting signature'}
-                            </p>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="py-8 text-center text-zinc-300">
-                        <CheckCircle2 className="mx-auto mb-1 opacity-20" size={20} />
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em]">Queue Clear</p>
-                      </div>
-                    )}
-                  </div>
-                  <button 
-                    onClick={() => setActiveView('requisitions')}
-                    className="w-full py-3 bg-zinc-950 text-yellow-400 text-[9px] font-black uppercase tracking-widest hover:bg-black transition-colors"
-                  >
-                    View All Orders
-                  </button>
-                </div>
-              )}
+
+
             </div>
 
             <div className="flex items-center gap-2 md:gap-3 border-l border-zinc-200 pl-3 md:pl-5">
