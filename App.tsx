@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   LayoutDashboard, 
   ClipboardList, 
@@ -181,6 +181,20 @@ function AppContent() {
   const [isSyncing, setIsSyncing] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   // Filter notifications only for specific statuses and active department
   const deptNotifications = requisitions.filter(r => 
@@ -228,17 +242,32 @@ function AppContent() {
     prevUnreadCount.current = unreadCount;
   }, [unreadCount, deptNotifications]);
 
-  const handleSync = async () => {
+  const handleSync = useCallback(async (silent = false) => {
+    if (isSyncing) return;
     setIsSyncing(true);
     try {
       await handleCloudSync();
-      toast.success('System synchronized with cloud');
+      if (!silent) {
+        toast.success('System synchronized with cloud');
+      }
     } catch (error) {
-      toast.error('Sync failed. Please check connection.');
+      if (!silent) {
+        toast.error('Sync failed. Please check connection.');
+      }
+      console.error('Sync failed:', error);
     } finally {
       setTimeout(() => setIsSyncing(false), 800);
     }
-  };
+  }, [handleCloudSync, isSyncing]);
+
+  // Auto-sync every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      handleSync(true);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [handleSync]);
 
   const handleNewRequisition = async (req: Requisition) => {
     setRequisitions(prev => [req, ...prev]);
@@ -321,7 +350,7 @@ function AppContent() {
 
           <div className="flex items-center gap-3 md:gap-6">
             <button 
-              onClick={handleSync}
+              onClick={() => handleSync(false)}
               disabled={isSyncing}
               className={`relative text-zinc-400 hover:text-maroon-bg transition-all p-2 hover:bg-zinc-100 rounded-full group ${isSyncing ? 'cursor-not-allowed opacity-70' : ''}`}
               title="Cloud Sync"
@@ -352,7 +381,39 @@ function AppContent() {
                 )}
               </button>
 
-
+              {showNotifications && defaultDept && (
+                <div className="absolute right-0 mt-3 w-72 bg-white rounded-2xl shadow-xl border border-zinc-100 z-50 animate-in fade-in slide-in-from-top-1 duration-200 origin-top-right overflow-hidden">
+                  <div className="p-4 border-b border-zinc-100 flex items-center justify-between">
+                    <h3 className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Department Alerts</h3>
+                    <span className="text-[9px] font-black text-maroon-bg uppercase tracking-tight">{unreadCount} New</span>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                    {deptNotifications.length > 0 ? (
+                      deptNotifications.map(req => (
+                        <div key={req.id} className="flex items-start gap-3 p-3 border-b border-zinc-50 last:border-0 hover:bg-zinc-50 transition-colors">
+                          <div className="w-6 h-6 flex items-center justify-center rounded-full bg-amber-50 text-amber-600 flex-shrink-0 mt-0.5">
+                            <AlertTriangle size={12} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-zinc-800 leading-tight">{req.id}</p>
+                            <p className="text-[9px] text-zinc-500 mt-0.5">Item ready for collection</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-zinc-400 text-[10px] italic">No new alerts.</div>
+                    )}
+                  </div>
+                  <div className="p-2 border-t border-zinc-100">
+                    <button 
+                      onClick={() => { setActiveView('requisitions'); setShowNotifications(false); }}
+                      className="w-full py-3 bg-zinc-900 text-yellow-400 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2"
+                    >
+                      View All Orders
+                    </button>
+                  </div>
+                </div>
+              )}
 
             </div>
 
@@ -404,6 +465,8 @@ function AppContent() {
               onSave={setDefaultDept} 
               isAdmin={isAdmin}
               onAdminToggle={setIsAdmin}
+              isDarkMode={isDarkMode}
+              onThemeToggle={setIsDarkMode}
             />
           )}
         </div>

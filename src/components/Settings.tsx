@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Department } from '../types';
-import { ShieldCheck, Lock, Save, AlertTriangle, ChevronDown } from 'lucide-react';
+import { ShieldCheck, Lock, Save, AlertTriangle, ChevronDown, Moon, Sun } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface SettingsProps {
@@ -9,12 +9,28 @@ interface SettingsProps {
   onSave: (department: Department | null) => void;
   isAdmin: boolean;
   onAdminToggle: (isAdmin: boolean) => void;
+  isDarkMode: boolean;
+  onThemeToggle: (isDarkMode: boolean) => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ defaultDept, availableDepartments, onSave, isAdmin, onAdminToggle }) => {
+const Settings: React.FC<SettingsProps> = ({ defaultDept, availableDepartments, onSave, isAdmin, onAdminToggle, isDarkMode, onThemeToggle }) => {
   const [selectedDept, setSelectedDept] = useState<Department | null>(defaultDept);
   const [adminPassword, setAdminPassword] = useState('');
   const [showPasswordInput, setShowPasswordInput] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   const handleSaveDepartment = () => {
     onSave(selectedDept);
@@ -126,6 +142,28 @@ const Settings: React.FC<SettingsProps> = ({ defaultDept, availableDepartments, 
             </button>
           </div>
         )}
+      </div>
+
+      {/* Dark Mode Toggle */}
+      <div className="bg-zinc-50 p-5 rounded-xl border border-zinc-200">
+        <h2 className="text-xl font-semibold text-zinc-800 mb-3">Display Mode</h2>
+        <p className="text-sm text-zinc-500 mb-4">Choose between light and dark themes.</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {isDarkMode ? <Moon size={20} className="text-indigo-400" /> : <Sun size={20} className="text-amber-500" />}
+            <span className="font-medium text-zinc-600">
+              {isDarkMode ? 'Dark Mode' : 'Light Mode'}
+            </span>
+          </div>
+          <button
+            onClick={() => onThemeToggle(!isDarkMode)}
+            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${isDarkMode ? 'bg-indigo-600' : 'bg-zinc-200'}`}
+          >
+            <span
+              className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${isDarkMode ? 'translate-x-6' : 'translate-x-1'}`}
+            />
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -125,7 +125,6 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
           </div>
         </div>
 
-        {/* Priority and Additional Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label htmlFor="priority" className="block text-xs font-black text-zinc-500 uppercase tracking-wider mb-2">Priority</label>
@@ -146,17 +145,19 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
               </div>
             </div>
           </div>
-          <div>
-            <label htmlFor="additionalInfo" className="block text-xs font-black text-zinc-500 uppercase tracking-wider mb-2">Additional Info</label>
-            <textarea
-              id="additionalInfo"
-              value={additionalInfo}
-              onChange={(e) => setAdditionalInfo(e.target.value)}
-              rows={3}
-              className="w-full p-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-maroon-bg/20 focus:border-maroon-bg/30 outline-none transition-all text-sm font-medium resize-y"
-              placeholder="Any additional information or special requests..."
-            ></textarea>
-          </div>
+        </div>
+
+        {/* Additional Info */}
+        <div>
+          <label htmlFor="additionalInfo" className="block text-xs font-black text-zinc-500 uppercase tracking-wider mb-2">Additional Info / Details</label>
+          <textarea
+            id="additionalInfo"
+            value={additionalInfo}
+            onChange={(e) => setAdditionalInfo(e.target.value)}
+            rows={3}
+            className="w-full p-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-maroon-bg/20 focus:border-maroon-bg/30 outline-none transition-all text-sm font-medium resize-y"
+            placeholder="Any additional information or special requests..."
+          ></textarea>
         </div>
 
         {/* Resource Selection */}
