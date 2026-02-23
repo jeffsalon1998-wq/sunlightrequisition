@@ -1,13 +1,14 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Requisition, RequestStatus, Department, RequisitionItem, InventoryItem } from '../types';
-import { Search, ChevronDown, ChevronUp, ArrowRight, Calendar, MapPin, Edit3, Trash2, Plus, Save, X, ShieldCheck, User, Layers, CalendarDays, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, ArrowRight, Calendar, MapPin, Edit3, Ban, Trash2, Plus, Save, X, ShieldCheck, User, Layers, CalendarDays, AlertTriangle, CheckCircle2, PenTool, MessageSquare } from 'lucide-react';
 import OrderTracker from './OrderTracker';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface RequisitionListProps {
   requisitions: Requisition[];
-  onStatusUpdate: (id: string, status: RequestStatus) => void;
+  onStatusUpdate: (id: string, status: RequestStatus, reason?: string) => void;
   onUpdateRequisition: (req: Requisition) => void;
   defaultDept: Department | null;
   availableDepartments: Department[];
@@ -34,9 +35,12 @@ export default function RequisitionList({
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editItems, setEditItems] = useState<RequisitionItem[]>([]);
+  const [editDescription, setEditDescription] = useState('');
   const [confirmAction, setConfirmAction] = useState<{ id: string, status: RequestStatus } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionType, setRejectionType] = useState<'Rejected' | 'For Justification'>('Rejected');
   
   // Edit mode add item state
   const [newItemName, setNewItemName] = useState('');
@@ -68,6 +72,7 @@ export default function RequisitionList({
   const startEditing = (req: Requisition) => {
     setEditingId(req.id);
     setEditItems([...req.items]);
+    setEditDescription(req.description || '');
     setNewItemName('');
     setNewItemQty(1);
     setNewItemUnit('UNITS');
@@ -77,6 +82,7 @@ export default function RequisitionList({
   const cancelEditing = () => {
     setEditingId(null);
     setEditItems([]);
+    setEditDescription('');
     setNewItemName('');
     setShowSearchResults(false);
   };
@@ -84,9 +90,13 @@ export default function RequisitionList({
   const saveEdits = async (req: Requisition) => {
     setIsProcessing(true);
     try {
+      const newStatus = (req.status === 'Rejected' || req.status === 'For Justification') ? 'Pending' : req.status;
       onUpdateRequisition({
         ...req,
-        items: editItems
+        items: editItems,
+        description: editDescription,
+        status: newStatus as any,
+        rejectionReason: newStatus === 'Pending' ? undefined : req.rejectionReason
       });
       setEditingId(null);
     } catch (error) {
@@ -104,7 +114,8 @@ export default function RequisitionList({
     if (!confirmAction) return;
     setIsProcessing(true);
     try {
-      await onStatusUpdate(confirmAction.id, confirmAction.status);
+      const reasonToPass = confirmAction.status === 'Pending' ? null : undefined;
+      await onStatusUpdate(confirmAction.id, confirmAction.status, reasonToPass as any);
       toast.success(`Requisition moved to ${confirmAction.status}`);
       setConfirmAction(null);
     } catch (error) {
@@ -114,19 +125,19 @@ export default function RequisitionList({
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteId) return;
+  const handleReject = async () => {
+    if (!rejectId || !rejectionReason.trim()) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
     setIsProcessing(true);
     try {
-      // In a real app, we'd have a deleteRequisitionDb service.
-      // For now, we'll just filter it out of the local state if possible, 
-      // but since state is in App.tsx, we should ideally have an onDelete prop.
-      // Since I can't easily add a new prop to all components right now without changing App.tsx,
-      // I'll skip the actual DB delete for this turn and just show the UI intent.
-      toast.info("Delete functionality requires backend implementation");
-      setDeleteId(null);
+      await onStatusUpdate(rejectId, rejectionType, rejectionReason);
+      toast.success(`Requisition marked as ${rejectionType}`);
+      setRejectId(null);
+      setRejectionReason('');
     } catch (error) {
-      toast.error("Failed to delete");
+      toast.error("Failed to update status");
     } finally {
       setIsProcessing(false);
     }
@@ -181,9 +192,11 @@ export default function RequisitionList({
     setNewItemQty(1);
   };
 
-  const filteredInventoryForEdit = inventory.filter(i => 
-    i.name.toLowerCase().includes(newItemName.toLowerCase())
-  );
+  const filteredInventoryForEdit = useMemo(() => {
+    return inventory.filter(i => 
+      i.name.toLowerCase().includes(newItemName.toLowerCase())
+    );
+  }, [inventory, newItemName]);
 
   const getStatusColor = (status: RequestStatus) => {
     switch (status) {
@@ -193,6 +206,7 @@ export default function RequisitionList({
       case 'Ready for Pickup': return 'bg-amber-50 text-amber-700';
       case 'Completed': return 'bg-green-50 text-green-700';
       case 'Rejected': return 'bg-red-50 text-red-700';
+      case 'For Justification': return 'bg-orange-50 text-orange-700';
       default: return 'bg-zinc-100 text-zinc-500';
     }
   };
@@ -212,36 +226,39 @@ export default function RequisitionList({
     'In Progress': 'Ready for Pickup',
     'Ready for Pickup': 'Completed',
     'Completed': null,
-    'Rejected': null
+    'Rejected': 'Pending',
+    'For Justification': 'Pending'
   };
 
-  // Filter Logic
-  const filteredRequisitions = requisitions.filter(req => {
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = 
-      req.requester.toLowerCase().includes(query) || 
-      req.id.toLowerCase().includes(query) ||
-      req.items.some(item => item.name.toLowerCase().includes(query));
-    
-    const matchesDept = deptFilter === 'All' || req.department === deptFilter;
-    return matchesSearch && matchesDept;
-  });
+
+
+  const filteredRequisitions = useMemo(() => {
+    return requisitions.filter(req => {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = 
+        req.requester.toLowerCase().includes(query) || 
+        req.id.toLowerCase().includes(query) ||
+        req.items.some(item => item.name.toLowerCase().includes(query));
+      
+      const matchesDept = deptFilter === 'All' || req.department === deptFilter;
+      return matchesSearch && matchesDept;
+    });
+  }, [requisitions, searchQuery, deptFilter]);
 
   // Sorting Logic: Active first, then by Date ASC (Earliest First)
-  // Completed/Rejected at the bottom
-  const sortedRequisitions = [...filteredRequisitions].sort((a, b) => {
-    const isInactive = (status: RequestStatus) => status === 'Completed' || status === 'Rejected';
-    const aInactive = isInactive(a.status);
-    const bInactive = isInactive(b.status);
+  const sortedRequisitions = useMemo(() => {
+    return [...filteredRequisitions].sort((a, b) => {
+      const isInactive = (status: RequestStatus) => status === 'Completed' || status === 'Rejected' || status === 'For Justification';
+      const aInactive = isInactive(a.status);
+      const bInactive = isInactive(b.status);
 
-    // If one is active and one is inactive, active comes first
-    if (aInactive !== bInactive) {
-      return aInactive ? 1 : -1;
-    }
+      if (aInactive !== bInactive) {
+        return aInactive ? 1 : -1;
+      }
 
-    // Otherwise, sort by date ascending (earliest first)
-    return new Date(a.date).getTime() - new Date(b.date).getTime();
-  });
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+  }, [requisitions]);
 
   return (
     <div className="space-y-3">
@@ -277,234 +294,304 @@ export default function RequisitionList({
       </div>
 
       <div className="space-y-2 pb-6">
-        {sortedRequisitions.map((req) => {
-          // Edit is allowed if:
-          // 1. Status is Pending AND (user is Admin OR user belongs to the dept)
-          // 2. Status is In Progress AND user is Admin (for quantity adjustments)
-          const isEditable = (req.status === 'Pending' && (isAdmin || (defaultDept && req.department === defaultDept))) || 
-                             (req.status === 'In Progress' && isAdmin);
+        <AnimatePresence mode="popLayout">
+          {sortedRequisitions.map((req, index) => {
+            // Edit is allowed if:
+            // 1. Status is Pending/Rejected/Justification AND (user is Admin OR user belongs to the dept)
+            // 2. Status is In Progress AND user is Admin (for quantity adjustments)
+            const isEditable = (['Pending', 'Rejected', 'For Justification'].includes(req.status) && (isAdmin || (defaultDept && req.department === defaultDept))) || 
+                               (req.status === 'In Progress' && isAdmin);
 
-          const isCurrentlyEditing = editingId === req.id;
+            const isCurrentlyEditing = editingId === req.id;
 
-          return (
-            <div key={req.id} className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden transition-all">
-              <div className="p-3 active:bg-zinc-50 cursor-pointer" onClick={() => toggleExpand(req.id)}>
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-mono font-bold bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-500">{req.id}</span>
-                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase ${getStatusColor(req.status)}`}>
-                      {req.status}
-                    </span>
-                    {isAdmin && (defaultDept === null || req.department !== defaultDept) && req.status === 'Pending' && (
-                      <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[7px] font-black uppercase tracking-widest">
-                        <ShieldCheck size={8} /> Admin
-                      </div>
-                    )}
-                  </div>
-                  <div className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase ${getRemarkColor(req.remarks)}`}>
-                    {req.remarks}
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-end">
-                  <div>
-                    <h3 className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
-                      <MapPin size={10} className="text-maroon-bg/40"/> {req.department}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[9px] text-zinc-400 flex items-center gap-1 font-medium italic"><User size={9}/> {req.requester}</span>
-                      <span className="text-[9px] text-zinc-400 flex items-center gap-1 font-medium"><Calendar size={9}/> {req.date}</span>
-                      {req.eventDate && (
-                         <span className="text-[9px] text-amber-600 flex items-center gap-1 font-bold bg-amber-50 px-1 rounded-sm"><CalendarDays size={9}/> Event: {req.eventDate}</span>
+            return (
+              <motion.div 
+                key={req.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ delay: Math.min(index * 0.05, 0.3) }}
+                className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden transition-all"
+              >
+                <div className="p-3 active:bg-zinc-50 cursor-pointer" onClick={() => toggleExpand(req.id)}>
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-mono font-bold bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-500">{req.id}</span>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase ${getStatusColor(req.status)}`}>
+                        {req.status}
+                      </span>
+                      {isAdmin && (defaultDept === null || req.department !== defaultDept) && req.status === 'Pending' && (
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[7px] font-black uppercase tracking-widest">
+                          <ShieldCheck size={8} /> Admin
+                        </div>
                       )}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {isAdmin && req.status === 'Pending' && (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setDeleteId(req.id); }}
-                        className="p-2 text-zinc-300 hover:text-red-500 transition-colors"
-                        aria-label={`Delete requisition ${req.id}`}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                    <div className="text-zinc-300">
-                      {expandedId === req.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    <div className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase ${getRemarkColor(req.remarks)}`}>
+                      {req.remarks}
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {expandedId === req.id && (
-                <div className="p-3 bg-zinc-50 border-t border-zinc-100 space-y-4 animate-in slide-in-from-top-1 duration-300">
-                  <div className="overflow-hidden">
-                    <OrderTracker status={req.status} />
-                  </div>
-
-                  <div className="bg-white p-3 rounded-lg border border-zinc-200 space-y-2.5 shadow-sm">
-                    <div className="flex justify-between items-center mb-0.5">
-                      <h4 className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Requested Items</h4>
-                      {isEditable && !isCurrentlyEditing && (
+                  
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <h3 className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                        <MapPin size={10} className="text-maroon-bg/40"/> {req.department}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[9px] text-zinc-400 flex items-center gap-1 font-medium italic"><User size={9}/> {req.requester}</span>
+                        <span className="text-[9px] text-zinc-400 flex items-center gap-1 font-medium"><Calendar size={9}/> {req.date}</span>
+                        {req.eventDate && (
+                           <span className="text-[9px] text-zinc-600 flex items-center gap-1 font-bold bg-zinc-100 px-1 rounded-sm"><CalendarDays size={9}/> Event: {req.eventDate}</span>
+                        )}
+                        {req.description && (
+                           <span className="text-[9px] text-zinc-400 flex items-center gap-1 font-medium truncate max-w-[120px]"><PenTool size={9}/> {req.description}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {isAdmin && req.status === 'Pending' && (
                         <button 
-                          onClick={(e) => { e.stopPropagation(); startEditing(req); }}
-                          className="min-h-[32px] px-3 text-[8px] font-bold text-maroon-bg/70 hover:text-maroon-bg flex items-center gap-1 uppercase tracking-tight transition-colors bg-zinc-50 rounded-lg"
-                          aria-label={`Edit requisition ${req.id}`}
+                          onClick={(e) => { e.stopPropagation(); setRejectId(req.id); }}
+                          className="p-2 text-zinc-300 hover:text-red-500 transition-colors"
+                          aria-label={`Reject requisition ${req.id}`}
                         >
-                          <Edit3 size={10} /> Edit
+                          <Ban size={14} />
                         </button>
                       )}
+                      <div className="text-zinc-300">
+                        {expandedId === req.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </div>
                     </div>
+                  </div>
+                </div>
 
-                    <div className="space-y-3">
-                      {(isCurrentlyEditing ? editItems : req.items).map(i => (
-                        <div key={i.id} className="flex items-center justify-between text-[11px] py-2 border-b border-zinc-50 last:border-0 group">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <span className="text-zinc-800 font-bold text-xs uppercase">{i.name}</span>
-                              <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-tighter ${
-                                i.source === 'Purchase' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-blue-50 text-blue-700 border border-blue-100'
-                              }`}>
-                                {i.source || 'Warehouse'}
-                              </span>
-                            </div>
-                            <div className="text-[9px] text-zinc-400 font-bold uppercase">{i.unit}</div>
+                <AnimatePresence>
+                  {expandedId === req.id && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-3 bg-zinc-50 border-t border-zinc-100 space-y-4">
+                        <div className="overflow-hidden">
+                          <OrderTracker status={req.status} />
+                        </div>
+
+                        {req.rejectionReason && (req.status === 'Rejected' || req.status === 'For Justification') && (
+                          <div className={`p-3 rounded-lg border animate-in slide-in-from-top-2 duration-300 ${
+                            req.status === 'For Justification' 
+                              ? 'bg-orange-50 border-orange-100' 
+                              : 'bg-red-50 border-red-100'
+                          }`}>
+                            <h4 className={`text-[8px] font-black uppercase tracking-widest mb-1 flex items-center gap-1 ${
+                              req.status === 'For Justification' ? 'text-orange-700' : 'text-red-700'
+                            }`}>
+                              <AlertTriangle size={10} /> {req.status} Reason
+                            </h4>
+                            <p className={`text-xs font-bold uppercase leading-tight ${
+                              req.status === 'For Justification' ? 'text-orange-900' : 'text-red-900'
+                            }`}>{req.rejectionReason}</p>
                           </div>
-                          <div className="flex items-center gap-3">
-                            {isCurrentlyEditing ? (
-                              <>
+                        )}
+
+                        {isCurrentlyEditing ? (
+                          <div className="bg-white p-3 rounded-lg border border-maroon-bg/20 space-y-2 shadow-sm">
+                            <h4 className="text-[8px] font-black text-maroon-bg uppercase tracking-widest flex items-center gap-1">
+                              <PenTool size={10} /> Edit Details
+                            </h4>
+                            <input 
+                              type="text"
+                              value={editDescription}
+                              onChange={(e) => setEditDescription(e.target.value.toUpperCase())}
+                              className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-bold text-zinc-900 outline-none focus:ring-2 focus:ring-maroon-bg/5 uppercase"
+                              placeholder="ENTER REQUEST DETAILS..."
+                            />
+                          </div>
+                        ) : req.description && (
+                          <div className="bg-zinc-100/50 p-3 rounded-lg border border-zinc-200/50">
+                            <h4 className="text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                              <PenTool size={10} /> Request Details
+                            </h4>
+                            <p className="text-xs font-bold text-zinc-800 uppercase leading-tight">{req.description}</p>
+                          </div>
+                        )}
+
+                        <div className="bg-white p-3 rounded-lg border border-zinc-200 space-y-2.5 shadow-sm">
+                          <div className="flex justify-between items-center mb-0.5">
+                            <h4 className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Requested Items</h4>
+                            {isEditable && !isCurrentlyEditing && (
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); startEditing(req); }}
+                                className="min-h-[32px] px-3 text-[8px] font-bold text-maroon-bg/70 hover:text-maroon-bg flex items-center gap-1 uppercase tracking-tight transition-colors bg-zinc-50 rounded-lg"
+                                aria-label={`Edit requisition ${req.id}`}
+                              >
+                                <Edit3 size={10} /> Edit
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="space-y-3">
+                            {(isCurrentlyEditing ? editItems : req.items).map(i => (
+                              <div key={i.id} className="flex items-center justify-between text-[11px] py-2 border-b border-zinc-50 last:border-0 group">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-1.5 mb-0.5">
+                                    <span className="text-zinc-800 font-bold text-xs uppercase">{i.name}</span>
+                                    <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-tighter ${
+                                      i.source === 'Purchase' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-blue-50 text-blue-700 border border-blue-100'
+                                    }`}>
+                                      {i.source || 'Warehouse'}
+                                    </span>
+                                    {!isCurrentlyEditing && i.source === 'Purchase' && i.bought && (
+                                      <span className="text-[7px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-tighter bg-green-100 text-green-700 border border-green-200">
+                                        BOUGHT
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[9px] text-zinc-400 font-bold uppercase">{i.unit}</div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  {isCurrentlyEditing ? (
+                                    <>
+                                      <input 
+                                        type="number"
+                                        min="1"
+                                        value={i.quantity}
+                                        onChange={(e) => handleUpdateQty(i.id, parseInt(e.target.value) || 1)}
+                                        className="w-12 text-center py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 font-bold outline-none text-[11px] focus:ring-1 focus:ring-maroon-bg/10"
+                                      />
+                                      <button 
+                                        onClick={() => handleRemoveItem(i.id)} 
+                                        className="text-zinc-300 hover:text-red-600 p-2.5 rounded-lg hover:bg-zinc-50 transition-colors"
+                                        aria-label={`Remove ${i.name}`}
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span className="font-black maroon-text">x{i.quantity}</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {isCurrentlyEditing && (
+                            <div className="pt-4 mt-2 space-y-2 border-t border-zinc-100">
+                               {/* Search/Add Input */}
+                              <div className="relative" ref={searchContainerRef}>
+                                  <input 
+                                      type="text"
+                                      placeholder="Search for items..."
+                                      value={newItemName}
+                                      onFocus={() => setShowSearchResults(true)}
+                                      onChange={(e) => {
+                                          setNewItemName(e.target.value.toUpperCase());
+                                          setShowSearchResults(true);
+                                      }}
+                                      className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-[11px] font-bold text-zinc-900 outline-none focus:ring-2 focus:ring-maroon-bg/5 transition-all uppercase placeholder:normal-case"
+                                  />
+                                   {showSearchResults && newItemName && (
+                                      <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-zinc-200 rounded-xl shadow-2xl z-50 flex flex-col max-h-[160px] overflow-hidden animate-in fade-in slide-in-from-top-1">
+                                          <div className="overflow-y-auto custom-scrollbar">
+                                              <button 
+                                                  type="button" 
+                                                  onClick={() => { setShowSearchResults(false); }} 
+                                                  className="w-full flex items-center gap-3 p-3 hover:bg-zinc-50 transition-colors border-b border-zinc-50 group text-left"
+                                              >
+                                                  <div className="w-6 h-6 flex items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors group-hover:bg-maroon-bg group-hover:text-gold-text"><Plus size={12} strokeWidth={3} /></div>
+                                                  <div className="flex-1">
+                                                      <p className="text-[7px] font-black text-red-700 uppercase tracking-widest">Use Custom</p>
+                                                      <p className="text-[10px] font-bold maroon-text italic leading-none">"{newItemName}"</p>
+                                                  </div>
+                                              </button>
+                                              {filteredInventoryForEdit.map(item => (
+                                                  <button key={item.id} type="button" onClick={() => selectInventoryItem(item)} className="w-full flex items-center gap-3 p-3 hover:bg-zinc-50 transition-colors border-b border-zinc-50 last:border-0 group text-left">
+                                                      <div className="w-6 h-6 flex items-center justify-center rounded-lg bg-zinc-100 text-zinc-400 transition-colors group-hover:bg-maroon-bg group-hover:text-gold-text"><Layers size={12} /></div>
+                                                      <div className="flex-1">
+                                                          <p className="text-[10px] font-bold text-zinc-800 leading-tight">{item.name}</p>
+                                                          <p className="text-[8px] font-bold text-zinc-400 mt-0.5 uppercase tracking-widest">{item.stock} {item.unit} available</p>
+                                                      </div>
+                                                  </button>
+                                              ))}
+                                          </div>
+                                      </div>
+                                  )}
+                              </div>
+
+                              {/* Qty, Unit, Add Button Row */}
+                              <div className="flex gap-2">
                                 <input 
                                   type="number"
                                   min="1"
-                                  value={i.quantity}
-                                  onChange={(e) => handleUpdateQty(i.id, parseInt(e.target.value) || 1)}
-                                  className="w-12 text-center py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 font-bold outline-none text-[11px] focus:ring-1 focus:ring-maroon-bg/10"
+                                  value={newItemQty}
+                                  onChange={(e) => setNewItemQty(parseInt(e.target.value) || 1)}
+                                  className="w-16 px-3 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-[11px] text-center font-bold outline-none focus:ring-2 focus:ring-maroon-bg/5"
+                                />
+                                <input 
+                                  type="text" 
+                                  placeholder="UNITS"
+                                  value={newItemUnit}
+                                  onChange={(e) => setNewItemUnit(e.target.value.toUpperCase())}
+                                  className="flex-1 px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-[11px] font-bold outline-none focus:ring-2 focus:ring-maroon-bg/5 uppercase"
                                 />
                                 <button 
-                                  onClick={() => handleRemoveItem(i.id)} 
-                                  className="text-zinc-300 hover:text-red-600 p-2.5 rounded-lg hover:bg-zinc-50 transition-colors"
-                                  aria-label={`Remove ${i.name}`}
+                                  onClick={handleAddItem} 
+                                  disabled={!newItemName} 
+                                  className="w-12 h-12 flex items-center justify-center maroon-bg text-white rounded-xl active:scale-95 transition-transform disabled:opacity-50 shadow-md"
+                                  aria-label="Add item to edit list"
                                 >
-                                  <Trash2 size={14} />
+                                  <Plus size={18} strokeWidth={3} />
                                 </button>
-                              </>
-                            ) : (
-                              <span className="font-black maroon-text">x{i.quantity}</span>
-                            )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {isCurrentlyEditing && (
+                          <div className="grid grid-cols-2 gap-3 pt-2">
+                            <button 
+                              onClick={cancelEditing} 
+                              className="py-3 bg-white border border-zinc-200 text-zinc-600 rounded-xl font-bold text-[11px] flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-zinc-50"
+                            >
+                              <X size={14} /> Cancel
+                            </button>
+                            <button 
+                              onClick={() => saveEdits(req)} 
+                              className="py-3 maroon-bg gold-text rounded-xl font-bold text-[11px] flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg"
+                            >
+                              <Save size={14} /> Save
+                            </button>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        )}
 
-                    {isCurrentlyEditing && (
-                      <div className="pt-4 mt-2 space-y-2 border-t border-zinc-100">
-                         {/* Search/Add Input */}
-                        <div className="relative" ref={searchContainerRef}>
-                            <input 
-                                type="text"
-                                placeholder="Search for items..."
-                                value={newItemName}
-                                onFocus={() => setShowSearchResults(true)}
-                                onChange={(e) => {
-                                    setNewItemName(e.target.value.toUpperCase());
-                                    setShowSearchResults(true);
-                                }}
-                                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-[11px] font-bold text-zinc-900 outline-none focus:ring-2 focus:ring-maroon-bg/5 transition-all uppercase placeholder:normal-case"
-                            />
-                             {showSearchResults && newItemName && (
-                                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-zinc-200 rounded-xl shadow-2xl z-50 flex flex-col max-h-[160px] overflow-hidden animate-in fade-in slide-in-from-top-1">
-                                    <div className="overflow-y-auto custom-scrollbar">
-                                        <button 
-                                            type="button" 
-                                            onClick={() => { setShowSearchResults(false); }} 
-                                            className="w-full flex items-center gap-3 p-3 hover:bg-zinc-50 transition-colors border-b border-zinc-50 group text-left"
-                                        >
-                                            <div className="w-6 h-6 flex items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors group-hover:bg-maroon-bg group-hover:text-yellow-400"><Plus size={12} strokeWidth={3} /></div>
-                                            <div className="flex-1">
-                                                <p className="text-[7px] font-black text-red-700 uppercase tracking-widest">Use Custom</p>
-                                                <p className="text-[10px] font-bold maroon-text italic leading-none">"{newItemName}"</p>
-                                            </div>
-                                        </button>
-                                        {filteredInventoryForEdit.map(item => (
-                                            <button key={item.id} type="button" onClick={() => selectInventoryItem(item)} className="w-full flex items-center gap-3 p-3 hover:bg-zinc-50 transition-colors border-b border-zinc-50 last:border-0 group text-left">
-                                                <div className="w-6 h-6 flex items-center justify-center rounded-lg bg-zinc-100 text-zinc-400 transition-colors group-hover:bg-maroon-bg group-hover:text-yellow-400"><Layers size={12} /></div>
-                                                <div className="flex-1">
-                                                    <p className="text-[10px] font-bold text-zinc-800 leading-tight">{item.name}</p>
-                                                    <p className="text-[8px] font-bold text-zinc-400 mt-0.5 uppercase tracking-widest">{item.stock} {item.unit} available</p>
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Qty, Unit, Add Button Row */}
-                        <div className="flex gap-2">
-                          <input 
-                            type="number"
-                            min="1"
-                            value={newItemQty}
-                            onChange={(e) => setNewItemQty(parseInt(e.target.value) || 1)}
-                            className="w-16 px-3 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-[11px] text-center font-bold outline-none focus:ring-2 focus:ring-maroon-bg/5"
-                          />
-                          <input 
-                            type="text" 
-                            placeholder="UNITS"
-                            value={newItemUnit}
-                            onChange={(e) => setNewItemUnit(e.target.value.toUpperCase())}
-                            className="flex-1 px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-[11px] font-bold outline-none focus:ring-2 focus:ring-maroon-bg/5 uppercase"
-                          />
+                        {!isCurrentlyEditing && isAdmin && nextStatusMap[req.status] && (
                           <button 
-                            onClick={handleAddItem} 
-                            disabled={!newItemName} 
-                            className="w-12 h-12 flex items-center justify-center maroon-bg text-white rounded-xl active:scale-95 transition-transform disabled:opacity-50 shadow-md"
-                            aria-label="Add item to edit list"
+                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(req.id, nextStatusMap[req.status]!); }}
+                            disabled={isProcessing}
+                            className="w-full py-4 maroon-accent-bg gold-text rounded-xl font-black text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg border border-red-900/10 disabled:opacity-50"
                           >
-                            <Plus size={18} strokeWidth={3} />
+                            {isProcessing ? 'Processing...' : `Process to ${nextStatusMap[req.status]}`} 
+                            {!isProcessing && <ArrowRight size={14} strokeWidth={3} />}
                           </button>
-                        </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-
-                  {isCurrentlyEditing && (
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                      <button 
-                        onClick={cancelEditing} 
-                        className="py-3 bg-white border border-zinc-200 text-zinc-600 rounded-xl font-bold text-[11px] flex items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-zinc-50"
-                      >
-                        <X size={14} /> Cancel
-                      </button>
-                      <button 
-                        onClick={() => saveEdits(req)} 
-                        className="py-3 maroon-bg text-yellow-400 rounded-xl font-bold text-[11px] flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg"
-                      >
-                        <Save size={14} /> Save
-                      </button>
-                    </div>
+                    </motion.div>
                   )}
-
-                  {!isCurrentlyEditing && isAdmin && nextStatusMap[req.status] && (
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleStatusUpdate(req.id, nextStatusMap[req.status]!); }}
-                      disabled={isProcessing}
-                      className="w-full py-4 maroon-accent-bg text-yellow-400 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg border border-red-900/10 disabled:opacity-50"
-                    >
-                      {isProcessing ? 'Processing...' : `Process to ${nextStatusMap[req.status]}`} 
-                      {!isProcessing && <ArrowRight size={14} strokeWidth={3} />}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
         {filteredRequisitions.length === 0 && (
-          <div className="py-20 text-center bg-white rounded-2xl border border-zinc-100 border-dashed">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="py-20 text-center bg-white rounded-2xl border border-zinc-100 border-dashed"
+          >
             <Search className="mx-auto mb-2 text-zinc-200" size={32} />
             <p className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.3em]">No requisitions found</p>
-          </div>
+          </motion.div>
         )}
       </div>
 
@@ -530,7 +617,7 @@ export default function RequisitionList({
               </button>
               <button 
                 onClick={executeStatusUpdate}
-                className="flex-1 py-5 bg-[#3d0000] text-yellow-400 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2"
+                className="flex-1 py-5 maroon-accent-bg gold-text text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2"
               >
                 <CheckCircle2 size={14} />
                 Confirm
@@ -540,32 +627,66 @@ export default function RequisitionList({
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {deleteId && (
+      {/* Rejection Modal */}
+      {rejectId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl border border-zinc-100 animate-in zoom-in-95 duration-300">
             <div className="p-8 text-center">
               <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Trash2 size={32} />
+                <Ban size={32} />
               </div>
-              <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight mb-2">Delete Request?</h3>
-              <p className="text-zinc-500 text-xs font-medium leading-relaxed">
-                Are you sure you want to delete requisition <span className="font-black text-zinc-800">{deleteId}</span>? This action cannot be undone.
+              <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight mb-2">Reject Request?</h3>
+              <p className="text-zinc-500 text-xs font-medium leading-relaxed mb-6">
+                Provide a reason for rejecting requisition <span className="font-black text-zinc-800">{rejectId}</span>.
               </p>
+              
+              <div className="relative mb-6">
+                <MessageSquare className="absolute left-3 top-3 text-zinc-400" size={14} />
+                <textarea 
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value.toUpperCase())}
+                  placeholder="ENTER REASON FOR REJECTION..."
+                  className="w-full pl-9 pr-3 py-3 bg-zinc-50 border border-zinc-200 rounded-2xl text-[11px] font-bold text-zinc-900 outline-none focus:ring-2 focus:ring-maroon-bg/5 min-h-[100px] uppercase"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button 
+                  onClick={() => setRejectionType('Rejected')}
+                  className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                    rejectionType === 'Rejected' 
+                    ? 'bg-red-600 text-white border-red-600 shadow-md' 
+                    : 'bg-white text-zinc-400 border-zinc-200 hover:border-red-200'
+                  }`}
+                >
+                  Rejected
+                </button>
+                <button 
+                  onClick={() => setRejectionType('For Justification')}
+                  className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                    rejectionType === 'For Justification' 
+                    ? 'bg-orange-500 text-white border-orange-500 shadow-md' 
+                    : 'bg-white text-zinc-400 border-zinc-200 hover:border-orange-200'
+                  }`}
+                >
+                  Justification
+                </button>
+              </div>
             </div>
             <div className="flex border-t border-zinc-100">
               <button 
-                onClick={() => setDeleteId(null)}
+                onClick={() => { setRejectId(null); setRejectionReason(''); }}
                 className="flex-1 py-5 text-zinc-400 text-[10px] font-black uppercase tracking-widest hover:bg-zinc-50 transition-colors"
               >
                 Cancel
               </button>
               <button 
-                onClick={handleDelete}
-                className="flex-1 py-5 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                onClick={handleReject}
+                disabled={isProcessing || !rejectionReason.trim()}
+                className="flex-1 py-5 maroon-accent-bg gold-text text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <Trash2 size={14} />
-                Delete
+                <CheckCircle2 size={14} />
+                Confirm
               </button>
             </div>
           </div>

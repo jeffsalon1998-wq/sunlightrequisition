@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { InventoryItem, Requisition, Department, RequisitionItem, RemarkType } from '../types';
-import { Plus, Trash2, Send, Search, X, Layers, Lock, AlertTriangle, ChevronDown, CalendarDays, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, Send, Search, X, Layers, Lock, AlertTriangle, ChevronDown, CalendarDays, CheckCircle2, PenTool } from 'lucide-react';
 import { DEPARTMENTS } from '../constants';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const requisitionSchema = z.object({
   requester: z.string().min(2, "Requester name must be at least 2 characters"),
@@ -270,9 +271,14 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                 </div>
               </div>
 
-              {remarks === 'Event Stock' && (
-                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                  <label className="block text-[8px] font-black text-amber-600 uppercase mb-1 ml-1 tracking-[0.1em] flex items-center gap-1">
+              {remarks === 'Event Stock' ? (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <label className="block text-[8px] font-black text-zinc-600 uppercase mb-1 ml-1 tracking-[0.1em] flex items-center gap-1">
                     <CalendarDays size={10} /> Event Date
                   </label>
                   <input 
@@ -282,9 +288,29 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                     value={eventDate}
                     onChange={e => setEventDate(e.target.value)}
                     onFocus={handleFocus}
-                    className="w-full bg-amber-50 border border-amber-200 px-4 py-2.5 rounded-xl text-xs font-bold text-zinc-900 focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 outline-none transition-all"
+                    className="w-full bg-zinc-50 border border-zinc-200 px-4 py-2.5 rounded-xl text-xs font-bold text-zinc-900 focus:ring-2 focus:ring-maroon-bg/5 focus:border-maroon-bg/10 outline-none transition-all"
                   />
-                </div>
+                </motion.div>
+              ) : (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <label className="block text-[8px] font-black text-zinc-600 uppercase mb-1 ml-1 tracking-[0.1em] flex items-center gap-1">
+                    <PenTool size={10} /> Request Details
+                  </label>
+                  <input 
+                    required
+                    type="text"
+                    value={description}
+                    onChange={e => setDescription(e.target.value.toUpperCase())}
+                    onFocus={handleFocus}
+                    className="w-full bg-zinc-50 border border-zinc-200 px-4 py-2.5 rounded-xl text-xs font-bold text-zinc-900 focus:ring-2 focus:ring-maroon-bg/5 focus:border-maroon-bg/10 focus:bg-white outline-none transition-all placeholder:text-zinc-300 uppercase"
+                    placeholder="ENTER SPECIFIC DETAILS OR REASON"
+                  />
+                </motion.div>
               )}
             </div>
           </div>
@@ -295,7 +321,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
           {/* Bottom Section: Resource Selection */}
           <div className="p-4 md:p-6 bg-zinc-50/50 space-y-4">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-1 h-3 yellow-bg rounded-full"></div>
+              <div className="w-1 h-3 gold-bg rounded-full"></div>
               <h3 className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Resource Selection</h3>
             </div>
 
@@ -333,7 +359,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                     <div className="overflow-y-auto custom-scrollbar">
                       {!hasExactMatch && (
                         <button type="button" onClick={() => selectInventoryItem({ name: searchQuery, unit: 'UNITS' })} className="w-full flex items-center gap-3 p-3 hover:bg-zinc-50 transition-colors border-b border-zinc-50 group text-left">
-                          <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors group-hover:bg-maroon-bg group-hover:text-yellow-400"><Plus size={14} strokeWidth={3} /></div>
+                          <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors group-hover:bg-maroon-bg group-hover:text-gold-text"><Plus size={14} strokeWidth={3} /></div>
                           <div className="flex-1">
                             <p className="text-[7px] font-black text-red-700 uppercase tracking-widest">Custom Entry</p>
                             <p className="text-xs font-bold maroon-text italic leading-none">"{searchQuery}"</p>
@@ -342,7 +368,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                       )}
                       {filteredInventory.map(item => (
                         <button key={item.id} type="button" onClick={() => selectInventoryItem(item)} className="w-full flex items-center gap-3 p-3 hover:bg-zinc-50 transition-colors border-b border-zinc-50 last:border-0 group text-left">
-                          <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-100 text-zinc-400 transition-colors group-hover:bg-maroon-bg group-hover:text-yellow-400"><Layers size={14} /></div>
+                          <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-100 text-zinc-400 transition-colors group-hover:bg-maroon-bg group-hover:text-gold-text"><Layers size={14} /></div>
                           <div className="flex-1">
                             <p className="text-xs font-bold text-zinc-800 leading-tight">{item.name}</p>
                             <p className="text-[8px] font-bold text-zinc-400 mt-0.5 uppercase tracking-widest">{item.stock} {item.unit} available</p>
@@ -378,7 +404,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                 </div>
                 <button 
                   type="button" onClick={addItem} disabled={!newItemName || !newItemQty || (typeof newItemQty === 'number' && newItemQty <= 0)}
-                  className="w-[46px] h-[46px] bg-yellow-400 border border-yellow-500 hover:bg-yellow-500 text-[#5d0000] rounded-xl active:scale-95 disabled:opacity-50 disabled:bg-zinc-100 disabled:border-zinc-200 disabled:text-zinc-300 transition-all flex items-center justify-center shadow-lg group"
+                  className="w-[46px] h-[46px] gold-bg border border-gold-text hover:bg-gold-text maroon-text rounded-xl active:scale-95 disabled:opacity-50 disabled:bg-zinc-100 disabled:border-zinc-200 disabled:text-zinc-300 transition-all flex items-center justify-center shadow-lg group"
                   aria-label="Add item to list"
                 >
                   <Plus size={24} strokeWidth={4} className="transition-transform group-hover:rotate-90" />
@@ -393,44 +419,57 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
               )}
 
               <div className="pt-2 border-t border-zinc-50">
-                {items.length > 0 ? (
-                  <div className="space-y-2">
-                    {items.map(item => (
-                      <div key={item.id} className="flex items-center justify-between p-3 bg-zinc-50 rounded-xl border border-zinc-100 animate-in slide-in-from-right-1 group hover:border-zinc-200 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <div className="w-8 h-8 rounded-lg bg-[#eab308] text-[#450a0a] font-black flex items-center justify-center text-xs shadow-sm flex-shrink-0">
-                            {item.quantity}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-black text-zinc-800 uppercase">{item.name}</span>
-                              <span className={`px-1.5 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-wider border ${
-                                item.source === 'Purchase' 
-                                  ? 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]' 
-                                  : 'bg-blue-50 text-blue-800 border-blue-100'
-                              }`}>
-                                {item.source}
-                              </span>
-                            </div>
-                            <span className="text-[9px] text-zinc-400 font-black uppercase tracking-[0.2em]">{item.unit}</span>
-                          </div>
-                        </div>
-                        <button 
-                          type="button" 
-                          onClick={() => removeItem(item.id)} 
-                          className="text-zinc-300 hover:text-red-500 transition-colors p-2 hover:bg-white rounded-lg"
-                          aria-label={`Remove ${item.name}`}
+                <AnimatePresence mode="popLayout">
+                  {items.length > 0 ? (
+                    <div className="space-y-2">
+                      {items.map((item, index) => (
+                        <motion.div 
+                          key={item.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ delay: Math.min(index * 0.05, 0.3) }}
+                          className="flex items-center justify-between p-3 bg-zinc-50 rounded-xl border border-zinc-100 group hover:border-zinc-200 transition-colors"
                         >
-                            <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-4 opacity-30 border-2 border-dashed border-zinc-200 rounded-xl">
-                      <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-400">List Empty</p>
-                  </div>
-                )}
+                          <div className="flex items-center gap-4">
+                            <div className="w-8 h-8 rounded-lg bg-[#eab308] text-[#450a0a] font-black flex items-center justify-center text-xs shadow-sm flex-shrink-0">
+                              {item.quantity}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-zinc-800 uppercase">{item.name}</span>
+                                <span className={`px-1.5 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-wider border ${
+                                  item.source === 'Purchase' 
+                                    ? 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]' 
+                                    : 'bg-blue-50 text-blue-800 border-blue-100'
+                                }`}>
+                                  {item.source}
+                                </span>
+                              </div>
+                              <span className="text-[9px] text-zinc-400 font-black uppercase tracking-[0.2em]">{item.unit}</span>
+                            </div>
+                          </div>
+                          <button 
+                            type="button" 
+                            onClick={() => removeItem(item.id)} 
+                            className="text-zinc-300 hover:text-red-500 transition-colors p-2 hover:bg-white rounded-lg"
+                            aria-label={`Remove ${item.name}`}
+                          >
+                              <Trash2 size={16} />
+                          </button>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-center py-4 opacity-30 border-2 border-dashed border-zinc-200 rounded-xl"
+                    >
+                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-400">List Empty</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>
@@ -440,10 +479,10 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
           <button 
             type="submit"
             disabled={!department || isSubmitting}
-            className="w-full py-4 bg-[#3d0000] text-[#fbbf24] rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl hover:shadow-2xl hover:translate-y-[-1px] active:translate-y-[1px] active:scale-[0.99] transition-all flex items-center justify-center gap-3 border border-white/5 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+            className="w-full py-4 maroon-accent-bg gold-text rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl hover:shadow-2xl hover:translate-y-[-1px] active:translate-y-[1px] active:scale-[0.99] transition-all flex items-center justify-center gap-3 border border-white/5 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
           >
             {isSubmitting ? (
-              <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-gold-text border-t-transparent rounded-full animate-spin" />
             ) : (
               <Send size={16} strokeWidth={3} className="rotate-[-10deg]" />
             )}
@@ -457,7 +496,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl border border-zinc-100 animate-in zoom-in-95 duration-300">
             <div className="p-8 text-center">
-              <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-16 h-16 bg-zinc-50 text-zinc-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <AlertTriangle size={32} />
               </div>
               <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight mb-2">Confirm Requisition</h3>
@@ -474,7 +513,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
               </button>
               <button 
                 onClick={confirmSubmit}
-                className="flex-1 py-5 bg-[#3d0000] text-yellow-400 text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2"
+                className="flex-1 py-5 maroon-accent-bg gold-text text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2"
               >
                 <CheckCircle2 size={14} />
                 Confirm

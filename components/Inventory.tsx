@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { InventoryItem } from '../types';
 import { Search, Filter, Layers, X, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface InventoryProps {
   inventory: InventoryItem[];
@@ -28,15 +29,24 @@ const Inventory: React.FC<InventoryProps> = ({ inventory }) => {
   }, [inventory, searchQuery, selectedCategory]);
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 px-1">
+    <div className="space-y-4">
+      <motion.div 
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="flex flex-col md:flex-row md:items-center justify-between gap-2 px-1"
+      >
         <div>
           <h2 className="text-xl md:text-2xl font-bold text-zinc-900 tracking-tight">Available Stocks</h2>
           <p className="text-[10px] md:text-[11px] text-zinc-500 italic font-medium">Global hotel resource tracking</p>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden"
+      >
         {/* Search and Filter Header */}
         <div className="p-3 border-b border-zinc-100 space-y-3">
           <div className="flex items-center gap-2">
@@ -62,7 +72,7 @@ const Inventory: React.FC<InventoryProps> = ({ inventory }) => {
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               className={`p-1.5 border rounded-lg transition-all flex items-center gap-2 ${
                 isFilterOpen || selectedCategory !== 'All' 
-                ? 'bg-maroon-bg text-yellow-400 border-maroon-bg shadow-sm' 
+                ? 'bg-maroon-bg text-gold-text border-maroon-bg shadow-sm' 
                 : 'text-zinc-400 bg-zinc-50 border-zinc-200 hover:text-maroon-bg'
               }`}
             >
@@ -80,7 +90,7 @@ const Inventory: React.FC<InventoryProps> = ({ inventory }) => {
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border ${
                     selectedCategory === cat 
-                    ? 'maroon-bg text-yellow-400 border-maroon-bg shadow-sm' 
+                    ? 'maroon-bg text-gold-text border-maroon-bg shadow-sm' 
                     : 'bg-white text-zinc-400 border-zinc-200 hover:border-zinc-300'
                   }`}
                 >
@@ -136,33 +146,46 @@ const Inventory: React.FC<InventoryProps> = ({ inventory }) => {
 
         {/* Mobile View Cards */}
         <div className="md:hidden divide-y divide-zinc-100">
-          {filteredInventory.map((item) => (
-            <div key={item.id} className="p-3 flex items-center justify-between active:bg-zinc-50 transition-colors">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-zinc-100 text-zinc-400">
-                  <Layers size={14} />
+          <AnimatePresence mode="popLayout">
+            {filteredInventory.map((item, index) => (
+              <motion.div 
+                key={item.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ delay: Math.min(index * 0.05, 0.3) }}
+                className="p-3 flex items-center justify-between active:bg-zinc-50 transition-colors"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-lg bg-zinc-100 text-zinc-400">
+                    <Layers size={14} />
+                  </div>
+                  <div>
+                    <h3 className="text-[11px] font-bold text-zinc-800 line-clamp-1">{item.name}</h3>
+                    <p className="text-[8px] text-zinc-400 font-black uppercase tracking-tight">{item.category}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-[11px] font-bold text-zinc-800 line-clamp-1">{item.name}</h3>
-                  <p className="text-[8px] text-zinc-400 font-black uppercase tracking-tight">{item.category}</p>
+                <div className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <span className="text-xs font-black text-zinc-900">{item.stock}</span>
+                    <span className="text-[8px] font-bold text-zinc-400 uppercase">{item.unit}</span>
+                  </div>
+                  <div className="text-[7px] text-zinc-300 font-black uppercase tracking-widest mt-0.5">Available</div>
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <span className="text-xs font-black text-zinc-900">{item.stock}</span>
-                  <span className="text-[8px] font-bold text-zinc-400 uppercase">{item.unit}</span>
-                </div>
-                <div className="text-[7px] text-zinc-300 font-black uppercase tracking-widest mt-0.5">Available</div>
-              </div>
-            </div>
-          ))}
+              </motion.div>
+            ))}
+          </AnimatePresence>
           {filteredInventory.length === 0 && (
-            <div className="p-12 text-center">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="p-12 text-center"
+            >
               <p className="text-xs text-zinc-400 font-medium italic">No items found.</p>
-            </div>
+            </motion.div>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

@@ -20,7 +20,8 @@ export type RequestStatus =
   | 'In Progress' 
   | 'Ready for Pickup' 
   | 'Completed' 
-  | 'Rejected';
+  | 'Rejected'
+  | 'For Justification';
 
 export type RemarkType = 'Urgent' | 'PAR Stock' | 'Event Stock';
 
@@ -33,6 +34,7 @@ export interface RequisitionItem {
   unit: string;
   estimatedCost: number;
   source: ItemSource;
+  bought?: boolean;
 }
 
 export interface Requisition {
@@ -45,6 +47,7 @@ export interface Requisition {
   remarks: RemarkType;
   description?: string;
   eventDate?: string;
+  rejectionReason?: string;
 }
 
 export interface InventoryItem {

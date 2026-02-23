@@ -13,11 +13,16 @@ const OrderTracker: React.FC<OrderTrackerProps> = ({ status }) => {
     { label: 'Completed', icon: <CheckCircle2 size={12} /> },
   ];
 
-  if (status === 'Rejected') {
+  if (status === 'Rejected' || status === 'For Justification') {
+    const isJustification = status === 'For Justification';
     return (
-      <div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-100 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest">
-        <XCircle size={16} />
-        Order Rejected
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border ${
+        isJustification 
+          ? 'text-orange-700 bg-orange-50 border-orange-100' 
+          : 'text-red-700 bg-red-50 border-red-100'
+      }`}>
+        {isJustification ? <PenTool size={16} /> : <XCircle size={16} />}
+        {isJustification ? 'For Justification' : 'Order Rejected'}
       </div>
     );
   }
@@ -44,8 +49,8 @@ const OrderTracker: React.FC<OrderTrackerProps> = ({ status }) => {
             <div key={step.label} className="flex flex-col items-center relative z-10">
               <div 
                 className={`w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  isCompleted ? 'maroon-accent-bg text-yellow-400 shadow-sm' : 
-                  isCurrent ? 'yellow-bg maroon-text border border-maroon-bg/20 shadow-lg scale-110' : 
+                  isCompleted ? 'maroon-accent-bg gold-text shadow-sm' : 
+                  isCurrent ? 'gold-bg maroon-text border border-maroon-bg/20 shadow-lg scale-110' : 
                   'bg-white text-zinc-300 border border-zinc-200'
                 }`}
               >

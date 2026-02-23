@@ -4,12 +4,12 @@ import { InventoryItem, Requisition, Department } from "../types";
 import { INITIAL_REQUISITIONS } from "../constants";
 
 // 1. Stock Registry Database (Read-only for this app)
-const STOCK_URL = import.meta.env.VITE_STOCK_DB_URL || "libsql://database-red-tree-vercel-icfg-tf7wnf43zngjwvbur4t9rp6n.aws-us-east-1.turso.io";
-const STOCK_TOKEN = import.meta.env.VITE_STOCK_DB_TOKEN || "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzA4ODM2NDEsImlkIjoiZGUyZjlkZTgtOTEzYS00YzE1LThlMzMtMzhlYTMzMGFkNzI5IiwicmlkIjoiYzNhZDBiYmMtNTI0My00NTc2LTkwYzQtYjNjZDdmZGU1ZmM3In0.8gOpqGrKkuO5LTP8PvBWZJjMskckorIyyPedTVeIZHSXqCtebkp2AQvl-2VPRZchEtizL8MJxQTZR2Da4tj4CQ";
+const STOCK_URL = import.meta.env.VITE_STOCK_DB_URL;
+const STOCK_TOKEN = import.meta.env.VITE_STOCK_DB_TOKEN;
 
 // 2. Requisitions Database (Read/Write)
-const REQ_URL = import.meta.env.VITE_REQ_DB_URL || "libsql://prrequest-vercel-icfg-tf7wnf43zngjwvbur4t9rp6n.aws-us-east-1.turso.io";
-const REQ_TOKEN = import.meta.env.VITE_REQ_DB_TOKEN || "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzEwNjA0NDEsImlkIjoiNTEyODlkNzQtYzhjNi00YzllLTg2YjYtNjk1MTZlY2ZjNDgzIiwicmlkIjoiMzQyNmUyODUtYjhlNS00OWI2LWE0ZDktNDFmZTQ3MzE0ZjNjIn0.rqlTsVVTqoMowmh-2XO9pptsb77qdThUvOvyH95KNsTkCUaOKiO2DwHMnl72qET3ORXfFyHjELmyTu4rLMKuDA";
+const REQ_URL = import.meta.env.VITE_REQ_DB_URL;
+const REQ_TOKEN = import.meta.env.VITE_REQ_DB_TOKEN;
 
 export const stockClient = createClient({
   url: STOCK_URL,
@@ -34,7 +34,8 @@ export const initDatabase = async () => {
         remarks TEXT,
         description TEXT,
         items TEXT,
-        event_date TEXT
+        event_date TEXT,
+        rejection_reason TEXT
       )
     `);
     
@@ -44,6 +45,17 @@ export const initDatabase = async () => {
     } catch (e) {
       // Column likely already exists, safe to ignore
     }
+
+    // Attempt to add rejection_reason column if it doesn't exist
+    try {
+      await requestClient.execute("ALTER TABLE requisitions ADD COLUMN rejection_reason TEXT");
+    } catch (e) {
+      // Column likely already exists
+    }
+
+    // Attempt to add bought column to items (stored in TEXT as JSON)
+    // This is a conceptual change; the logic in get/save/update handles the data structure
+    // No direct ALTER TABLE is needed since `items` is a TEXT column.
 
     // 2. App Config Table (for Password etc.)
     await requestClient.execute(`
@@ -71,8 +83,8 @@ export const initDatabase = async () => {
     if (Number(reqCount.rows[0].count) === 0) {
       for (const req of INITIAL_REQUISITIONS) {
         await requestClient.execute({
-          sql: "INSERT INTO requisitions (id, department, requester, date, status, remarks, description, items, event_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          args: [req.id, req.department, req.requester, req.date, req.status, req.remarks, req.description || "", JSON.stringify(req.items), req.eventDate || null]
+          sql: "INSERT INTO requisitions (id, department, requester, date, status, remarks, description, items, event_date, rejection_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          args: [req.id, req.department, req.requester, req.date, req.status, req.remarks, req.description || "", JSON.stringify(req.items), req.eventDate || null, req.rejectionReason || null]
         });
       }
     }
@@ -144,17 +156,43 @@ export const getInventory = async (): Promise<InventoryItem[]> => {
 export const getRequisitions = async (): Promise<Requisition[]> => {
   try {
     const result = await requestClient.execute("SELECT * FROM requisitions ORDER BY date DESC");
-    return result.rows.map(row => ({
-      id: String(row.id),
-      department: row.department as any,
-      requester: String(row.requester),
-      date: String(row.date),
-      status: row.status as any,
-      remarks: row.remarks as any,
-      description: String(row.description),
-      items: JSON.parse(String(row.items)),
-      eventDate: row.event_date ? String(row.event_date) : undefined
-    }));
+    return result.rows.map(row => {
+      // The 'items' column might contain invalid JSON (e.g., "bought": yes instead of "bought": true).
+      // This pre-processes the string to make it valid before parsing.
+      const itemsJsonString = String(row.items)
+        .replace(/"bought":\s*"yes"/g, '"bought": true')
+        .replace(/"bought":\s*"no"/g, '"bought": false');
+
+      try {
+        return {
+          id: String(row.id),
+          department: row.department as any,
+          requester: String(row.requester),
+          date: String(row.date),
+          status: row.status as any,
+          remarks: row.remarks as any,
+          description: String(row.description),
+          items: JSON.parse(itemsJsonString),
+          eventDate: row.event_date ? String(row.event_date) : undefined,
+          rejectionReason: row.rejection_reason ? String(row.rejection_reason) : undefined
+        };
+      } catch (parseError) {
+        console.error(`Failed to parse items JSON for requisition ${row.id}:`, itemsJsonString, parseError);
+        // Return the requisition with empty items to avoid crashing the whole app
+        return {
+          id: String(row.id),
+          department: row.department as any,
+          requester: String(row.requester),
+          date: String(row.date),
+          status: row.status as any,
+          remarks: row.remarks as any,
+          description: String(row.description),
+          items: [],
+          eventDate: row.event_date ? String(row.event_date) : undefined,
+          rejectionReason: row.rejection_reason ? String(row.rejection_reason) : undefined
+        };
+      }
+    });
   } catch (error) {
     console.error("Error fetching requisitions:", error);
     return [];
@@ -163,23 +201,30 @@ export const getRequisitions = async (): Promise<Requisition[]> => {
 
 export const saveRequisitionDb = async (req: Requisition) => {
   await requestClient.execute({
-    sql: "INSERT INTO requisitions (id, department, requester, date, status, remarks, description, items, event_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    args: [req.id, req.department, req.requester, req.date, req.status, req.remarks, req.description || "", JSON.stringify(req.items), req.eventDate || null]
+    sql: "INSERT INTO requisitions (id, department, requester, date, status, remarks, description, items, event_date, rejection_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    args: [req.id, req.department, req.requester, req.date, req.status, req.remarks, req.description || "", JSON.stringify(req.items), req.eventDate || null, req.rejectionReason || null]
   });
 };
 
 export const updateRequisitionDb = async (req: Requisition) => {
   await requestClient.execute({
-    sql: "UPDATE requisitions SET department = ?, requester = ?, date = ?, status = ?, remarks = ?, description = ?, items = ?, event_date = ? WHERE id = ?",
-    args: [req.department, req.requester, req.date, req.status, req.remarks, req.description || "", JSON.stringify(req.items), req.eventDate || null, req.id]
+    sql: "UPDATE requisitions SET department = ?, requester = ?, date = ?, status = ?, remarks = ?, description = ?, items = ?, event_date = ?, rejection_reason = ? WHERE id = ?",
+    args: [req.department, req.requester, req.date, req.status, req.remarks, req.description || "", JSON.stringify(req.items), req.eventDate || null, req.rejectionReason || null, req.id]
   });
 };
 
-export const updateStatusDb = async (id: string, status: string) => {
-  await requestClient.execute({
-    sql: "UPDATE requisitions SET status = ? WHERE id = ?",
-    args: [status, id]
-  });
+export const updateStatusDb = async (id: string, status: string, reason?: string | null) => {
+  if (reason !== undefined) {
+    await requestClient.execute({
+      sql: "UPDATE requisitions SET status = ?, rejection_reason = ? WHERE id = ?",
+      args: [status, reason, id]
+    });
+  } else {
+    await requestClient.execute({
+      sql: "UPDATE requisitions SET status = ? WHERE id = ?",
+      args: [status, id]
+    });
+  }
 };
 
 export const verifyAdminPassword = async (password: string): Promise<boolean> => {

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Department } from '../types';
 import { DEPARTMENTS } from '../constants';
 import { verifyAdminPassword } from '../services/database';
-import { Save, Lock, ShieldCheck, ShieldAlert, KeyRound, Shield, Eye, EyeOff, X, HelpCircle } from 'lucide-react';
+import { Save, Lock, ShieldCheck, ShieldAlert, KeyRound, Shield, Eye, EyeOff, X, HelpCircle, Moon, Sun } from 'lucide-react';
 
 interface SettingsProps {
   defaultDept: Department | null;
@@ -11,6 +11,8 @@ interface SettingsProps {
   onSave: (dept: Department | null) => void;
   isAdmin: boolean;
   onAdminToggle: (active: boolean) => void;
+  isDarkMode: boolean;
+  onThemeToggle: (active: boolean) => void;
 }
 
 type VerifyingAction = 'save_settings' | 'activate_admin' | null;
@@ -20,7 +22,9 @@ export default function Settings({
   availableDepartments,
   onSave, 
   isAdmin, 
-  onAdminToggle 
+  onAdminToggle,
+  isDarkMode,
+  onThemeToggle
 }: SettingsProps) {
   const [selectedDept, setSelectedDept] = useState<Department | null>(defaultDept);
   const [password, setPassword] = useState('');
@@ -104,9 +108,31 @@ export default function Settings({
             <button 
               disabled={!!verifyingAction}
               onClick={() => startVerification('save_settings')}
-              className="w-full py-3.5 maroon-accent-bg text-yellow-400 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg active:scale-[0.98] disabled:opacity-50 transition-all flex items-center justify-center gap-2 border border-red-900/10"
+              className="w-full py-3.5 maroon-accent-bg gold-text rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg active:scale-[0.98] disabled:opacity-50 transition-all flex items-center justify-center gap-2 border border-red-900/10"
             >
               <Save size={14} /> Save Preferences
+            </button>
+          </div>
+        </section>
+
+        <section className="space-y-3 pt-3 border-t border-zinc-50">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-1 h-4 maroon-bg rounded-full"></div>
+            <h3 className="text-[9px] font-black text-zinc-900 uppercase tracking-[0.2em]">Appearance</h3>
+          </div>
+
+          <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100 flex items-center justify-between">
+            <div>
+              <h4 className="text-[10px] font-black text-zinc-800 uppercase tracking-tight">Dark Mode</h4>
+              <p className="text-[8px] text-zinc-500 font-medium italic">Adjust visual theme</p>
+            </div>
+            <button 
+              onClick={() => onThemeToggle(!isDarkMode)}
+              className={`w-12 h-6 rounded-full transition-all relative ${isDarkMode ? 'bg-zinc-800' : 'bg-zinc-200'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 rounded-full transition-all flex items-center justify-center ${isDarkMode ? 'left-7 bg-indigo-500' : 'left-1 bg-white shadow-sm'}`}>
+                {isDarkMode ? <Moon size={10} className="text-white" /> : <Sun size={10} className="text-amber-500" />}
+              </div>
             </button>
           </div>
         </section>
@@ -132,7 +158,7 @@ export default function Settings({
 
         {verifyingAction && (
           <div className="animate-in zoom-in-95 fade-in duration-300">
-            <form onSubmit={handleVerify} className="space-y-3 p-4 maroon-accent-bg rounded-xl text-yellow-400 shadow-2xl border border-red-900/10">
+            <form onSubmit={handleVerify} className="space-y-3 p-4 maroon-accent-bg rounded-xl gold-text shadow-2xl border border-red-900/10">
               <div className="flex items-center justify-between mb-0.5">
                 <div className="flex items-center gap-1.5">
                   <Lock size={12} />
@@ -142,10 +168,10 @@ export default function Settings({
               </div>
               <div className="relative">
                 <KeyRound size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
-                <input required autoFocus type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="Token..." className="w-full bg-black/30 border border-white/10 pl-9 pr-10 py-2.5 rounded-lg focus:ring-4 focus:ring-yellow-400/10 outline-none text-xs font-bold text-white placeholder:text-white/20 transition-all" />
+                <input required autoFocus type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="Token..." className="w-full bg-black/30 border border-white/10 pl-9 pr-10 py-2.5 rounded-lg focus:ring-4 focus:ring-gold-text/10 outline-none text-xs font-bold text-white placeholder:text-white/20 transition-all" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">{showPassword ? <EyeOff size={14} /> : <Eye size={14} />}</button>
               </div>
-              <button type="submit" className="w-full py-2.5 bg-yellow-400 text-red-950 rounded-lg font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all shadow-lg">Authorize</button>
+              <button type="submit" className="w-full py-2.5 gold-bg text-red-950 rounded-lg font-black text-[9px] uppercase tracking-widest active:scale-95 transition-all shadow-lg">Authorize</button>
             </form>
           </div>
         )}
