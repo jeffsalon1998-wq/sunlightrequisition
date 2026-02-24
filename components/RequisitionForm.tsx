@@ -225,44 +225,44 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
   return (
     <div className="max-w-xl mx-auto space-y-4 pb-48 animate-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col px-1">
-        <h2 className="text-xl font-bold text-zinc-900 tracking-tight">Create Request</h2>
+        <h2 className="text-2xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">Create Request</h2>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="bg-white rounded-[24px] border border-zinc-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-stone-900 rounded-[24px] border border-stone-200 dark:border-stone-800 shadow-sm overflow-hidden transition-colors">
           {/* Top Section: Core Info */}
           <div className="p-4 md:p-6 space-y-4">
             <div className="space-y-3">
               <div>
-                <label className="block text-[8px] font-black text-zinc-400 uppercase mb-1 ml-1 tracking-[0.1em]">Staff ID / Name</label>
+                <label className="block text-[8px] font-black text-stone-400 uppercase mb-1 ml-1 tracking-[0.1em]">Staff ID / Name</label>
                 <input 
                   required
                   type="text" 
                   value={requester} 
                   onChange={e => setRequester(e.target.value.toUpperCase())}
                   onFocus={handleFocus}
-                  className="w-full bg-zinc-50 border border-zinc-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-maroon-bg/5 focus:border-maroon-bg/10 focus:bg-white outline-none text-xs font-bold text-zinc-900 transition-all placeholder:text-zinc-300 uppercase"
+                  className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 focus:border-maroon-bg/30 dark:focus:border-gold-bg/30 focus:bg-white dark:focus:bg-stone-900 outline-none text-xs font-bold text-stone-900 dark:text-stone-100 transition-all placeholder:text-stone-400 uppercase"
                   placeholder="ENTER STAFF IDENTIFIER"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[8px] font-black text-zinc-400 uppercase mb-1 ml-1 tracking-[0.1em]">Department</label>
-                  <div className="w-full bg-zinc-100 border border-zinc-200 px-4 py-2.5 rounded-xl text-xs font-bold flex justify-between items-center cursor-not-allowed">
-                    <span className={department ? "text-zinc-500" : "text-zinc-400 italic"}>
+                  <label className="block text-[8px] font-black text-stone-400 uppercase mb-1 ml-1 tracking-[0.1em]">Department</label>
+                  <div className="w-full bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 px-4 py-2.5 rounded-xl text-xs font-bold flex justify-between items-center cursor-not-allowed">
+                    <span className={department ? "text-stone-500 dark:text-stone-400" : "text-stone-400 dark:text-stone-500 italic"}>
                       {department || "Set in Settings"}
                     </span>
-                    <Lock size={12} className="text-zinc-300" />
+                    <Lock size={12} className="text-stone-300 dark:text-stone-600" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[8px] font-black text-zinc-400 uppercase mb-1 ml-1 tracking-[0.1em]">Priority</label>
+                  <label className="block text-[8px] font-black text-stone-400 uppercase mb-1 ml-1 tracking-[0.1em]">Priority</label>
                   <select 
                     value={remarks} 
                     onChange={e => setRemarks(e.target.value as RemarkType)}
                     onFocus={handleFocus}
-                    className="w-full bg-zinc-50 border border-zinc-200 px-4 py-2.5 rounded-xl text-xs font-bold text-zinc-900 focus:ring-2 focus:ring-maroon-bg/5 focus:border-maroon-bg/10 focus:bg-white outline-none appearance-none transition-all"
+                    className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-4 py-2.5 rounded-xl text-xs font-bold text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 focus:border-maroon-bg/30 dark:focus:border-gold-bg/30 focus:bg-white dark:focus:bg-stone-900 outline-none appearance-none transition-all"
                   >
                     <option value="Urgent">Urgent</option>
                     <option value="PAR Stock">PAR Stock</option>
@@ -278,7 +278,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                   exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden"
                 >
-                  <label className="block text-[8px] font-black text-zinc-600 uppercase mb-1 ml-1 tracking-[0.1em] flex items-center gap-1">
+                  <label className="block text-[8px] font-black text-stone-600 dark:text-stone-400 uppercase mb-1 ml-1 tracking-[0.1em] flex items-center gap-1">
                     <CalendarDays size={10} /> Event Date
                   </label>
                   <input 
@@ -288,7 +288,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                     value={eventDate}
                     onChange={e => setEventDate(e.target.value)}
                     onFocus={handleFocus}
-                    className="w-full bg-zinc-50 border border-zinc-200 px-4 py-2.5 rounded-xl text-xs font-bold text-zinc-900 focus:ring-2 focus:ring-maroon-bg/5 focus:border-maroon-bg/10 outline-none transition-all"
+                    className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-4 py-2.5 rounded-xl text-xs font-bold text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 focus:border-maroon-bg/30 dark:focus:border-gold-bg/30 outline-none transition-all"
                   />
                 </motion.div>
               ) : (
@@ -298,7 +298,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                   exit={{ opacity: 0, height: 0 }}
                   className="overflow-hidden"
                 >
-                  <label className="block text-[8px] font-black text-zinc-600 uppercase mb-1 ml-1 tracking-[0.1em] flex items-center gap-1">
+                  <label className="block text-[8px] font-black text-stone-600 dark:text-stone-400 uppercase mb-1 ml-1 tracking-[0.1em] flex items-center gap-1">
                     <PenTool size={10} /> Request Details
                   </label>
                   <input 
@@ -307,7 +307,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                     value={description}
                     onChange={e => setDescription(e.target.value.toUpperCase())}
                     onFocus={handleFocus}
-                    className="w-full bg-zinc-50 border border-zinc-200 px-4 py-2.5 rounded-xl text-xs font-bold text-zinc-900 focus:ring-2 focus:ring-maroon-bg/5 focus:border-maroon-bg/10 focus:bg-white outline-none transition-all placeholder:text-zinc-300 uppercase"
+                    className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-4 py-2.5 rounded-xl text-xs font-bold text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 focus:border-maroon-bg/30 dark:focus:border-gold-bg/30 focus:bg-white dark:focus:bg-stone-900 outline-none transition-all placeholder:text-stone-400 uppercase"
                     placeholder="ENTER SPECIFIC DETAILS OR REASON"
                   />
                 </motion.div>
@@ -316,18 +316,18 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
           </div>
 
           {/* Divider */}
-          <div className="h-px w-full bg-zinc-100"></div>
+          <div className="h-px w-full bg-stone-100 dark:bg-stone-800"></div>
 
           {/* Bottom Section: Resource Selection */}
-          <div className="p-4 md:p-6 bg-zinc-50/50 space-y-4">
+          <div className="p-4 md:p-6 bg-stone-50/50 dark:bg-stone-900/50 space-y-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-1 h-3 gold-bg rounded-full"></div>
-              <h3 className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Resource Selection</h3>
+              <h3 className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em]">Resource Selection</h3>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-zinc-100 shadow-sm space-y-4">
+            <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm space-y-4">
               <div className="relative">
-                <label className="block text-[8px] font-black text-zinc-400 uppercase mb-1.5 ml-1 tracking-widest">Catalog Search</label>
+                <label className="block text-[8px] font-black text-stone-400 uppercase mb-1.5 ml-1 tracking-widest">Catalog Search</label>
                 <div className="relative">
                   <input 
                     ref={searchInputRef}
@@ -339,14 +339,14 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                       setSearchQuery(val);
                       setNewItemName(val);
                     }}
-                    className="w-full bg-zinc-50 border border-zinc-200 pl-4 pr-10 py-3 rounded-xl text-xs font-bold text-zinc-900 outline-none focus:ring-2 focus:ring-maroon-bg/5 focus:bg-white transition-all shadow-sm placeholder:text-zinc-300 uppercase"
+                    className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 pl-4 pr-10 py-3 rounded-xl text-xs font-bold text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 focus:bg-white dark:focus:bg-stone-900 transition-all shadow-sm placeholder:text-stone-400 uppercase"
                     placeholder="SEARCH FOR ITEMS..."
                   />
                   {(searchQuery || newItemName) && (
                     <button 
                     type="button" 
                     onClick={() => { setSearchQuery(''); setNewItemName(''); }} 
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-red-500"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-300 hover:text-red-500"
                     aria-label="Clear search"
                   >
                     <X size={14} />
@@ -355,23 +355,23 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                 </div>
 
                 {shouldShowResults && (
-                  <div ref={resultsRef} className="absolute left-0 right-0 top-full mt-1 bg-white border border-zinc-200 rounded-xl shadow-2xl z-50 flex flex-col max-h-[200px] overflow-hidden animate-in fade-in slide-in-from-top-1">
+                  <div ref={resultsRef} className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-2xl z-50 flex flex-col max-h-[200px] overflow-hidden animate-in fade-in slide-in-from-top-1">
                     <div className="overflow-y-auto custom-scrollbar">
                       {!hasExactMatch && (
-                        <button type="button" onClick={() => selectInventoryItem({ name: searchQuery, unit: 'UNITS' })} className="w-full flex items-center gap-3 p-3 hover:bg-zinc-50 transition-colors border-b border-zinc-50 group text-left">
-                          <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors group-hover:bg-maroon-bg group-hover:text-gold-text"><Plus size={14} strokeWidth={3} /></div>
+                        <button type="button" onClick={() => selectInventoryItem({ name: searchQuery, unit: 'UNITS' })} className="w-full flex items-center gap-3 p-3 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors border-b border-stone-50 dark:border-stone-800 group text-left">
+                          <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 transition-colors group-hover:bg-maroon-bg group-hover:text-gold-text"><Plus size={14} strokeWidth={3} /></div>
                           <div className="flex-1">
-                            <p className="text-[7px] font-black text-red-700 uppercase tracking-widest">Custom Entry</p>
-                            <p className="text-xs font-bold maroon-text italic leading-none">"{searchQuery}"</p>
+                            <p className="text-[7px] font-black text-red-700 dark:text-red-400 uppercase tracking-widest">Custom Entry</p>
+                            <p className="text-xs font-bold maroon-text dark:text-gold-text italic leading-none">"{searchQuery}"</p>
                           </div>
                         </button>
                       )}
                       {filteredInventory.map(item => (
-                        <button key={item.id} type="button" onClick={() => selectInventoryItem(item)} className="w-full flex items-center gap-3 p-3 hover:bg-zinc-50 transition-colors border-b border-zinc-50 last:border-0 group text-left">
-                          <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-100 text-zinc-400 transition-colors group-hover:bg-maroon-bg group-hover:text-gold-text"><Layers size={14} /></div>
+                        <button key={item.id} type="button" onClick={() => selectInventoryItem(item)} className="w-full flex items-center gap-3 p-3 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors border-b border-stone-50 dark:border-stone-800 last:border-0 group text-left">
+                          <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-500 transition-colors group-hover:bg-maroon-bg group-hover:text-gold-text"><Layers size={14} /></div>
                           <div className="flex-1">
-                            <p className="text-xs font-bold text-zinc-800 leading-tight">{item.name}</p>
-                            <p className="text-[8px] font-bold text-zinc-400 mt-0.5 uppercase tracking-widest">{item.stock} {item.unit} available</p>
+                            <p className="text-xs font-bold text-stone-800 dark:text-stone-200 leading-tight">{item.name}</p>
+                            <p className="text-[8px] font-bold text-stone-400 dark:text-stone-500 mt-0.5 uppercase tracking-widest">{item.stock} {item.unit} available</p>
                           </div>
                         </button>
                       ))}
@@ -382,29 +382,29 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
               
               <div className="grid grid-cols-[1fr_2fr_auto] gap-3 items-end">
                 <div>
-                  <label className="block text-[9px] font-black text-zinc-400 uppercase mb-1.5 ml-1 tracking-widest">QTY</label>
+                  <label className="block text-[9px] font-black text-stone-400 uppercase mb-1.5 ml-1 tracking-widest">QTY</label>
                   <input 
                     type="number" min="0" 
                     onFocus={handleFocus}
-                    className={`w-full bg-zinc-50 border ${isOverStock ? 'border-red-500' : 'border-zinc-200'} px-3 py-3 rounded-xl text-center text-sm font-black text-zinc-900 outline-none focus:ring-2 focus:ring-maroon-bg/5 transition-all shadow-sm placeholder:text-zinc-300`} 
+                    className={`w-full bg-stone-50 dark:bg-stone-950 border ${isOverStock ? 'border-red-500 dark:border-red-500/50' : 'border-stone-200 dark:border-stone-800'} px-3 py-3 rounded-xl text-center text-sm font-black text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 transition-all shadow-sm placeholder:text-stone-400`} 
                     value={newItemQty}
                     onChange={e => setNewItemQty(parseInt(e.target.value) || '')}
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-black text-zinc-400 uppercase mb-1.5 ml-1 tracking-widest">UNIT</label>
+                  <label className="block text-[9px] font-black text-stone-400 uppercase mb-1.5 ml-1 tracking-widest">UNIT</label>
                   <input 
                     type="text" placeholder="UNITS"
                     onFocus={handleFocus}
-                    className="w-full bg-zinc-50 border border-zinc-200 px-4 py-3 rounded-xl text-xs font-bold text-zinc-900 outline-none focus:ring-2 focus:ring-maroon-bg/5 transition-all uppercase shadow-sm"
+                    className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-4 py-3 rounded-xl text-xs font-bold text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 transition-all uppercase shadow-sm"
                     value={newItemUnit}
                     onChange={e => setNewItemUnit(e.target.value.toUpperCase())}
                   />
                 </div>
                 <button 
                   type="button" onClick={addItem} disabled={!newItemName || !newItemQty || (typeof newItemQty === 'number' && newItemQty <= 0)}
-                  className="w-[46px] h-[46px] gold-bg border border-gold-text hover:bg-gold-text maroon-text rounded-xl active:scale-95 disabled:opacity-50 disabled:bg-zinc-100 disabled:border-zinc-200 disabled:text-zinc-300 transition-all flex items-center justify-center shadow-lg group"
+                  className="w-[46px] h-[46px] gold-bg border border-gold-text hover:bg-gold-text maroon-text rounded-xl active:scale-95 disabled:opacity-50 disabled:bg-stone-100 dark:disabled:bg-stone-800 disabled:border-stone-200 dark:disabled:border-stone-700 disabled:text-stone-300 dark:disabled:text-stone-600 transition-all flex items-center justify-center shadow-lg group"
                   aria-label="Add item to list"
                 >
                   <Plus size={24} strokeWidth={4} className="transition-transform group-hover:rotate-90" />
@@ -412,13 +412,13 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
               </div>
 
               {isOverStock && (
-                <div className="flex items-center gap-1.5 px-3 py-2 bg-red-50 border border-red-100 rounded-xl animate-in fade-in slide-in-from-top-1">
-                  <AlertTriangle size={12} className="text-red-600" />
-                  <p className="text-[9px] font-bold text-red-600 uppercase tracking-tight">Warning: Exceeds available stock ({availableStock})</p>
+                <div className="flex items-center gap-1.5 px-3 py-2 bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-900/50 rounded-xl animate-in fade-in slide-in-from-top-1">
+                  <AlertTriangle size={12} className="text-red-600 dark:text-red-400" />
+                  <p className="text-[9px] font-bold text-red-600 dark:text-red-400 uppercase tracking-tight">Warning: Exceeds available stock ({availableStock})</p>
                 </div>
               )}
 
-              <div className="pt-2 border-t border-zinc-50">
+              <div className="pt-2 border-t border-stone-50 dark:border-stone-800">
                 <AnimatePresence mode="popLayout">
                   {items.length > 0 ? (
                     <div className="space-y-2">
@@ -429,7 +429,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, scale: 0.95 }}
                           transition={{ delay: Math.min(index * 0.05, 0.3) }}
-                          className="flex items-center justify-between p-3 bg-zinc-50 rounded-xl border border-zinc-100 group hover:border-zinc-200 transition-colors"
+                          className="flex items-center justify-between p-3 bg-stone-50 dark:bg-stone-800/50 rounded-xl border border-stone-100 dark:border-stone-800 group hover:border-stone-200 dark:hover:border-stone-700 transition-colors"
                         >
                           <div className="flex items-center gap-4">
                             <div className="w-8 h-8 rounded-lg bg-[#eab308] text-[#450a0a] font-black flex items-center justify-center text-xs shadow-sm flex-shrink-0">
@@ -437,22 +437,22 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-black text-zinc-800 uppercase">{item.name}</span>
+                                <span className="text-xs font-black text-stone-800 dark:text-stone-200 uppercase">{item.name}</span>
                                 <span className={`px-1.5 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-wider border ${
                                   item.source === 'Purchase' 
-                                    ? 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]' 
-                                    : 'bg-blue-50 text-blue-800 border-blue-100'
+                                    ? 'bg-[#fef3c7] dark:bg-amber-900/30 text-[#92400e] dark:text-amber-400 border-[#fde68a] dark:border-amber-900/50' 
+                                    : 'bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 border-blue-100 dark:border-blue-900/50'
                                 }`}>
                                   {item.source}
                                 </span>
                               </div>
-                              <span className="text-[9px] text-zinc-400 font-black uppercase tracking-[0.2em]">{item.unit}</span>
+                              <span className="text-[9px] text-stone-400 dark:text-stone-500 font-black uppercase tracking-[0.2em]">{item.unit}</span>
                             </div>
                           </div>
                           <button 
                             type="button" 
                             onClick={() => removeItem(item.id)} 
-                            className="text-zinc-300 hover:text-red-500 transition-colors p-2 hover:bg-white rounded-lg"
+                            className="text-stone-300 dark:text-stone-600 hover:text-red-500 dark:hover:text-red-400 transition-colors p-2 hover:bg-white dark:hover:bg-stone-800 rounded-lg"
                             aria-label={`Remove ${item.name}`}
                           >
                               <Trash2 size={16} />
@@ -464,9 +464,9 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                     <motion.div 
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="text-center py-4 opacity-30 border-2 border-dashed border-zinc-200 rounded-xl"
+                      className="text-center py-4 opacity-30 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl"
                     >
-                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-400">List Empty</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-stone-400 dark:text-stone-500">List Empty</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -494,20 +494,20 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
       {/* Confirmation Modal */}
       {showConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl border border-zinc-100 animate-in zoom-in-95 duration-300">
+          <div className="bg-white dark:bg-stone-900 w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl border border-stone-100 dark:border-stone-800 animate-in zoom-in-95 duration-300">
             <div className="p-8 text-center">
-              <div className="w-16 h-16 bg-zinc-50 text-zinc-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-16 h-16 bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-400 rounded-full flex items-center justify-center mx-auto mb-6">
                 <AlertTriangle size={32} />
               </div>
-              <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight mb-2">Confirm Requisition</h3>
-              <p className="text-zinc-500 text-xs font-medium leading-relaxed">
-                You are about to submit <span className="font-black text-zinc-800">{items.length} items</span> for <span className="font-black text-zinc-800">{department}</span>. This action will notify the purchasing department.
+              <h3 className="text-xl font-black text-stone-900 dark:text-stone-100 uppercase tracking-tight mb-2">Confirm Requisition</h3>
+              <p className="text-stone-500 dark:text-stone-400 text-xs font-medium leading-relaxed">
+                You are about to submit <span className="font-black text-stone-800 dark:text-stone-200">{items.length} items</span> for <span className="font-black text-stone-800 dark:text-stone-200">{department}</span>. This action will notify the purchasing department.
               </p>
             </div>
-            <div className="flex border-t border-zinc-100">
+            <div className="flex border-t border-stone-100 dark:border-stone-800">
               <button 
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 py-5 text-zinc-400 text-[10px] font-black uppercase tracking-widest hover:bg-zinc-50 transition-colors"
+                className="flex-1 py-5 text-stone-400 dark:text-stone-500 text-[10px] font-black uppercase tracking-widest hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
               >
                 Cancel
               </button>

@@ -18,8 +18,8 @@ const OrderTracker: React.FC<OrderTrackerProps> = ({ status }) => {
     return (
       <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border ${
         isJustification 
-          ? 'text-orange-700 bg-orange-50 border-orange-100' 
-          : 'text-red-700 bg-red-50 border-red-100'
+          ? 'text-orange-700 bg-orange-50 border-orange-100 dark:text-orange-400 dark:bg-orange-900/30 dark:border-orange-900/50' 
+          : 'text-red-700 bg-red-50 border-red-100 dark:text-red-400 dark:bg-red-900/30 dark:border-red-900/50'
       }`}>
         {isJustification ? <PenTool size={16} /> : <XCircle size={16} />}
         {isJustification ? 'For Justification' : 'Order Rejected'}
@@ -33,7 +33,7 @@ const OrderTracker: React.FC<OrderTrackerProps> = ({ status }) => {
     <div className="w-full py-2">
       <div className="flex items-center justify-between relative px-2">
         {/* Background Line */}
-        <div className="absolute top-1/2 left-4 right-4 h-[2px] bg-zinc-200 -translate-y-1/2 z-0" />
+        <div className="absolute top-1/2 left-4 right-4 h-[2px] bg-stone-200 dark:bg-stone-800 -translate-y-1/2 z-0" />
         
         {/* Progress Line */}
         <div 
@@ -51,14 +51,14 @@ const OrderTracker: React.FC<OrderTrackerProps> = ({ status }) => {
                 className={`w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
                   isCompleted ? 'maroon-accent-bg gold-text shadow-sm' : 
                   isCurrent ? 'gold-bg maroon-text border border-maroon-bg/20 shadow-lg scale-110' : 
-                  'bg-white text-zinc-300 border border-zinc-200'
+                  'bg-white dark:bg-stone-900 text-stone-300 dark:text-stone-600 border border-stone-200 dark:border-stone-800'
                 }`}
               >
                 {isCompleted ? <CheckCircle2 size={14} /> : step.icon}
               </div>
               <span 
                 className={`absolute -bottom-5 text-[7px] md:text-[8px] font-black whitespace-nowrap uppercase tracking-tighter ${
-                  isCurrent ? 'maroon-text' : 'text-zinc-300'
+                  isCurrent ? 'maroon-text dark:text-gold-text' : 'text-stone-300 dark:text-stone-600'
                 }`}
               >
                 {step.label}

@@ -266,7 +266,7 @@ function AppContent() {
   }
 
   return (
-    <div className="flex h-screen bg-white font-sans text-zinc-900 animate-in fade-in duration-500">
+    <div className="flex h-screen bg-white dark:bg-stone-950 font-sans text-stone-900 dark:text-stone-100 animate-in fade-in duration-500 transition-colors">
       <Sidebar activeView={activeView} setActiveView={setActiveView as (view: string) => void} />
       <div className="flex-1 flex flex-col min-w-0">
         <Header
@@ -275,9 +275,12 @@ function AppContent() {
           isSyncing={isSyncing}
           handleSync={() => handleSync(false)}
           unreadCount={unreadCount}
+          showNotifications={showNotifications}
           setShowNotifications={setShowNotifications}
+          deptNotifications={deptNotifications}
+          notificationRef={notificationRef}
         />
-        <main className="flex-1 overflow-y-auto bg-zinc-50 p-6">
+        <main className="flex-1 overflow-y-auto bg-stone-50 dark:bg-stone-950 p-6 transition-colors">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeView}

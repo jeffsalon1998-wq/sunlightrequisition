@@ -11,7 +11,37 @@
             darkMode: 'class',
             theme: {
                 extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
                     colors: {
+                        maroon: {
+                            50: '#fdf2f2',
+                            100: '#fbe5e5',
+                            200: '#f6cccc',
+                            300: '#f0a6a6',
+                            400: '#e67373',
+                            500: '#d94444',
+                            600: '#c22929',
+                            700: '#a31d1d',
+                            800: '#871a1a',
+                            900: '#711a1a',
+                            950: '#4a0404', // Primary
+                        },
+                        gold: {
+                            50: '#fdf9ed',
+                            100: '#fbf0d1',
+                            200: '#f6e0a4',
+                            300: '#efc96d',
+                            400: '#e8b03e',
+                            500: '#d4af37', // Accent
+                            600: '#c58b21',
+                            700: '#a4681e',
+                            800: '#85511e',
+                            900: '#6d421d',
+                            950: '#3f220e',
+                        },
                         'maroon-bg': '#4a0404', // Deep Burgundy
                         'maroon-accent-bg': '#2d0202', // Darker Oxblood
                         'gold-text': '#d4af37', // Burnished Gold
@@ -22,7 +52,7 @@
             }
         }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Great+Vibes&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Great+Vibes&display=swap" rel="stylesheet">
     <script>
         // Fix for libraries trying to overwrite window.fetch
         (function() {
@@ -48,14 +78,14 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f9fafb; /* gray-50 / zinc-50 */
-            color: #18181b; /* zinc-900 */
+            background-color: #fafaf9; /* stone-50 */
+            color: #1c1917; /* stone-900 */
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
         
         h1, h2, h3, h4, h5, h6 {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Playfair Display', serif;
         }
 
         .maroon-bg { background-color: #4a0404; }
@@ -69,7 +99,7 @@
         .yellow-text { color: #d4af37; }
         
         .maroon-accent-bg { background-color: #2d0202; } 
-        .dark-gray-bg { background-color: #18181b; } /* zinc-900 */
+        .dark-gray-bg { background-color: #1c1917; } /* stone-900 */
 
         /* Dark Mode Overrides */
         .dark body {
@@ -81,26 +111,26 @@
             background-color: #1c1917; /* stone-900 */
         }
         
-        .dark .bg-zinc-50 {
+        .dark .bg-stone-50 {
             background-color: #0c0a09; /* stone-950 */
         }
         
-        .dark .border-zinc-200, 
-        .dark .border-zinc-100 {
+        .dark .border-stone-200, 
+        .dark .border-stone-100 {
             border-color: #292524; /* stone-800 */
         }
         
-        .dark .text-zinc-800,
-        .dark .text-zinc-900 {
+        .dark .text-stone-800,
+        .dark .text-stone-900 {
             color: #f5f5f4; /* stone-100 */
         }
         
-        .dark .text-zinc-500,
-        .dark .text-zinc-400 {
+        .dark .text-stone-500,
+        .dark .text-stone-400 {
             color: #a8a29e; /* stone-400 */
         }
 
-        .dark .bg-zinc-100 {
+        .dark .bg-stone-100 {
             background-color: #292524; /* stone-800 */
         }
 
@@ -118,6 +148,7 @@
             letter-spacing: 0.4em;
             font-weight: 800;
             text-transform: uppercase;
+            font-family: 'Inter', sans-serif;
         }
 
         .no-scrollbar::-webkit-scrollbar {
@@ -136,7 +167,7 @@
             background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #e4e4e7; /* zinc-200 */
+            background: #e7e5e4; /* stone-200 */
             border-radius: 10px;
         }
 

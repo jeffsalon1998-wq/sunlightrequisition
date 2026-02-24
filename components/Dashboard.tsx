@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { InventoryItem, Requisition, Department } from '../types';
 import { Clock, Truck, PenTool, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -32,7 +32,7 @@ const Dashboard: React.FC<DashboardProps> = ({ inventory, requisitions, defaultD
   const deptRequisitions = useMemo(() => {
     return defaultDept 
       ? monthlyRequisitions.filter(r => r.department === defaultDept) 
-      : [];
+      : monthlyRequisitions;
   }, [monthlyRequisitions, defaultDept]);
 
   const stats = useMemo(() => {
@@ -65,71 +65,85 @@ const Dashboard: React.FC<DashboardProps> = ({ inventory, requisitions, defaultD
       .sort((a, b) => b.value - a.value);
   }, [monthlyRequisitions]);
 
-  const COLORS = ['#4a0404', '#d4af37', '#71717a', '#6b0a0a', '#1a2e05', '#1e3a8a', '#581c87', '#7c2d12'];
+  const statusData = useMemo(() => {
+    const statusCounts: Record<string, number> = {};
+    deptRequisitions.forEach(r => {
+      statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
+    });
+    return Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
+  }, [deptRequisitions]);
+
+  const COLORS = ['#4a0404', '#d4af37', '#78716c', '#7f1d1d', '#14532d', '#1e3a8a', '#581c87', '#7c2d12'];
+  const STATUS_COLORS = {
+    'Pending': '#f59e0b',
+    'For signing': '#8b5cf6',
+    'In Progress': '#3b82f6',
+    'Ready for Pickup': '#0ea5e9',
+    'Completed': '#10b981',
+    'Rejected': '#ef4444',
+    'For Justification': '#f43f5e'
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center px-1">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
         >
-          <h2 className="text-xl md:text-2xl font-bold text-zinc-900 tracking-tight">Operations Hub</h2>
-          <p className="text-[10px] md:text-[11px] text-zinc-500 font-medium italic">Monthly Tracking: {currentMonthName}</p>
+          <h2 className="text-2xl md:text-3xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">Operations Hub</h2>
+          <p className="text-xs text-stone-500 dark:text-stone-400 font-medium italic mt-1">Monthly Tracking: {currentMonthName}</p>
         </motion.div>
-        <button className="hidden md:flex items-center gap-2 text-[9px] text-zinc-500 font-black uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm hover:border-zinc-300 transition-colors">
-          <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse"></span>
+        <button className="hidden md:flex items-center gap-2 text-[10px] text-stone-500 dark:text-stone-400 font-black uppercase tracking-widest bg-white dark:bg-stone-900 px-4 py-2 rounded-xl border border-stone-200 dark:border-stone-800 shadow-sm hover:border-stone-300 dark:hover:border-stone-700 transition-colors">
+          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
           Live Feed
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
-        <StatCard title="New" value={stats.pendingCount} icon={<Clock size={14} />} trend="Review" color="amber" delay={0} />
-        <StatCard title="Signing" value={stats.signingCount} icon={<PenTool size={14} />} trend="Action" color="purple" delay={0.1} />
-        <StatCard title="Active" value={stats.readyForPickupCount} icon={<Truck size={14} />} trend="Picking" color="blue" delay={0.2} />
-        <StatCard title="Rate" value={`${stats.completionRate}%`} icon={<CheckCircle2 size={14} className="text-green-600" />} trend="Closed" color="green" delay={0.3} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+        <StatCard title="New" value={stats.pendingCount} icon={<Clock size={16} />} trend="Review" color="amber" delay={0} />
+        <StatCard title="Signing" value={stats.signingCount} icon={<PenTool size={16} />} trend="Action" color="purple" delay={0.1} />
+        <StatCard title="Active" value={stats.readyForPickupCount} icon={<Truck size={16} />} trend="Picking" color="blue" delay={0.2} />
+        <StatCard title="Rate" value={`${stats.completionRate}%`} icon={<CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />} trend="Closed" color="green" delay={0.3} />
       </div>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="grid grid-cols-1 gap-4"
-      >
-        <div className="bg-white p-4 md:p-6 rounded-[24px] shadow-sm border border-zinc-200 relative overflow-hidden">
-          <div className="flex justify-between items-center mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="lg:col-span-2 bg-white dark:bg-stone-900 p-5 md:p-8 rounded-3xl shadow-sm border border-stone-200 dark:border-stone-800 relative overflow-hidden"
+        >
+          <div className="flex justify-between items-center mb-8">
             <div>
-              <h3 className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">Departmental Distribution</h3>
-              <p className="text-[8px] text-zinc-400 font-bold uppercase mt-0.5">{currentMonthName} Activity</p>
-            </div>
-            <div className="flex gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-maroon-bg"></span>
-              <span className="w-1.5 h-1.5 rounded-full bg-gold-bg"></span>
-              <span className="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
+              <h3 className="text-xs font-black text-stone-400 dark:text-stone-500 uppercase tracking-[0.2em]">Departmental Distribution</h3>
+              <p className="text-[10px] text-stone-500 dark:text-stone-400 font-bold uppercase mt-1">{currentMonthName} Activity</p>
             </div>
           </div>
 
-          <div className="h-40 md:h-56 w-full">
+          <div className="h-48 md:h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f5" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e7e5e4" strokeOpacity={0.5} />
                 <XAxis 
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{fill: '#a1a1aa', fontSize: 9, fontWeight: 'bold'}} 
-                  dy={5}
+                  tick={{fill: '#a8a29e', fontSize: 10, fontWeight: 'bold'}} 
+                  dy={10}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{fill: '#a1a1aa', fontSize: 9, fontWeight: 'bold'}} 
+                  tick={{fill: '#a8a29e', fontSize: 10, fontWeight: 'bold'}} 
+                  dx={-10}
                 />
                 <Tooltip 
-                  cursor={{fill: '#fafafa'}}
-                  contentStyle={{backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #f4f4f5', boxShadow: '0 8px 12px -3px rgb(0 0 0 / 0.05)', fontSize: '10px', fontWeight: 'bold'}}
+                  cursor={{fill: 'rgba(168, 162, 158, 0.1)'}}
+                  contentStyle={{backgroundColor: 'var(--tw-bg-opacity, #fff)', borderRadius: '16px', border: '1px solid #e7e5e4', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '11px', fontWeight: 'bold'}}
+                  itemStyle={{color: '#4a0404'}}
                 />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={32}>
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="hover:opacity-80 transition-opacity" />
                   ))}
@@ -137,36 +151,95 @@ const Dashboard: React.FC<DashboardProps> = ({ inventory, requisitions, defaultD
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="bg-white dark:bg-stone-900 p-5 md:p-8 rounded-3xl shadow-sm border border-stone-200 dark:border-stone-800 relative overflow-hidden flex flex-col"
+        >
+          <div className="mb-4">
+            <h3 className="text-xs font-black text-stone-400 dark:text-stone-500 uppercase tracking-[0.2em]">Status Overview</h3>
+            <p className="text-[10px] text-stone-500 dark:text-stone-400 font-bold uppercase mt-1">Current State</p>
+          </div>
+          
+          <div className="flex-1 min-h-[200px] relative">
+            {statusData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS] || '#a8a29e'} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{backgroundColor: 'var(--tw-bg-opacity, #fff)', borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: '11px', fontWeight: 'bold'}}
+                    itemStyle={{color: '#4a0404'}}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-stone-400 text-sm font-medium">
+                No data available
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 };
 
-const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; trend: string; color: string; delay: number }> = ({ title, value, icon, trend, color, delay }) => (
-  <motion.div 
-    initial={{ opacity: 0, scale: 0.95 }}
-    animate={{ opacity: 1, scale: 1 }}
-    transition={{ delay }}
-    whileHover={{ y: -4 }}
-    className="bg-white p-3 md:p-4 rounded-[20px] shadow-sm border border-zinc-200 transition-all group"
-  >
-    <div className="flex justify-between items-center mb-2">
-      <div className="p-1.5 rounded-lg bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200 transition-colors">
-        {icon}
+const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; trend: string; color: string; delay: number }> = ({ title, value, icon, trend, color, delay }) => {
+  const getGradients = () => {
+    switch(color) {
+      case 'amber': return 'from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-amber-100 dark:border-amber-900/50 text-amber-600 dark:text-amber-500';
+      case 'purple': return 'from-purple-50 to-fuchsia-50 dark:from-purple-950/30 dark:to-fuchsia-950/30 border-purple-100 dark:border-purple-900/50 text-purple-600 dark:text-purple-500';
+      case 'blue': return 'from-blue-50 to-sky-50 dark:from-blue-950/30 dark:to-sky-950/30 border-blue-100 dark:border-blue-900/50 text-blue-600 dark:text-blue-500';
+      case 'green': return 'from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-emerald-100 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-500';
+      default: return 'from-stone-50 to-stone-100 dark:from-stone-900 dark:to-stone-800 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400';
+    }
+  };
+
+  const getIconBg = () => {
+    switch(color) {
+      case 'amber': return 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400';
+      case 'purple': return 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400';
+      case 'blue': return 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400';
+      case 'green': return 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400';
+      default: return 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400';
+    }
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay }}
+      whileHover={{ y: -4, scale: 1.02 }}
+      className={`bg-gradient-to-br ${getGradients()} p-4 md:p-6 rounded-3xl shadow-sm border transition-all group`}
+    >
+      <div className="flex justify-between items-center mb-4">
+        <div className={`p-2 rounded-xl ${getIconBg()} transition-colors`}>
+          {icon}
+        </div>
+        <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest opacity-80">
+          {trend}
+        </span>
       </div>
-      <span className={`text-[8px] md:text-[9px] font-black uppercase tracking-wider ${
-        color === 'purple' ? 'text-purple-600' :
-        color === 'blue' ? 'text-blue-600' : 
-        color === 'green' ? 'text-green-600' : 
-        'text-amber-600'
-      }`}>
-        {trend}
-      </span>
-    </div>
-    <div className="text-xl md:text-2xl font-black text-zinc-900 leading-tight mb-0.5">{value}</div>
-    <div className="text-[9px] md:text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{title}</div>
-  </motion.div>
-);
+      <div className="text-3xl md:text-4xl font-black text-stone-900 dark:text-stone-100 leading-tight mb-1">{value}</div>
+      <div className="text-[10px] md:text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-widest">{title}</div>
+    </motion.div>
+  );
+};
 
 export default Dashboard;

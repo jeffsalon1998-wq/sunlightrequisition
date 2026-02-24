@@ -2,6 +2,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { ThemeProvider } from './src/components/ThemeProvider';
+import { Toaster } from 'sonner';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -11,6 +13,9 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <ThemeProvider defaultTheme="system" storageKey="sunlight-theme">
+      <App />
+      <Toaster position="top-right" richColors closeButton />
+    </ThemeProvider>
   </React.StrictMode>
 );
