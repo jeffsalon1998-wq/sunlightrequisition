@@ -234,13 +234,15 @@ export default function RequisitionList({
 
   const filteredRequisitions = useMemo(() => {
     return requisitions.filter(req => {
+      if (deptFilter === 'Purchasing') return false;
+
       const query = searchQuery.toLowerCase();
       const matchesSearch = 
         req.requester.toLowerCase().includes(query) || 
         req.id.toLowerCase().includes(query) ||
         req.items.some(item => item.name.toLowerCase().includes(query));
       
-      const matchesDept = deptFilter === 'All' || req.department === deptFilter;
+      const matchesDept = deptFilter === 'All' ? req.department !== 'Purchasing' : req.department === deptFilter;
       return matchesSearch && matchesDept;
     });
   }, [requisitions, searchQuery, deptFilter]);
