@@ -334,16 +334,25 @@ export const getRequisitions = async (): Promise<Requisition[]> => {
 };
 
 export const saveRequisitionDb = async (req: Requisition) => {
+  console.log("DEBUG: saveRequisitionDb called. isUsingFallback:", isUsingFallback, "dbClient:", !!dbClient);
   if (isUsingFallback || !dbClient) {
+    console.log("DEBUG: Saving to localStorage fallback");
     const requisitions = await getRequisitions();
     const updated = [req, ...requisitions];
     localStorage.setItem(LS_REQUISITIONS, JSON.stringify(updated));
     return;
   }
-  await dbClient.execute({
-    sql: "INSERT INTO requisitions (id, department, requester, date, status, remarks, description, items, event_date, rejection_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    args: [req.id, req.department, req.requester, req.date, req.status, req.remarks, req.description || "", JSON.stringify(req.items), req.eventDate || null, req.rejectionReason || null]
-  });
+  try {
+    console.log("DEBUG: Attempting to save to DB");
+    await dbClient.execute({
+      sql: "INSERT INTO requisitions (id, department, requester, date, status, remarks, description, items, event_date, rejection_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      args: [req.id, req.department, req.requester, req.date, req.status, req.remarks, req.description || "", JSON.stringify(req.items), req.eventDate || null, req.rejectionReason || null]
+    });
+    console.log("DEBUG: Successfully saved to DB");
+  } catch (err) {
+    console.error("DEBUG: Failed to save to DB:", err);
+    throw err;
+  }
 };
 
 export const updateRequisitionDb = async (req: Requisition) => {

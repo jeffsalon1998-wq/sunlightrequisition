@@ -278,7 +278,7 @@ export default function RequisitionList({
           <input 
             type="text" 
             placeholder="SEARCH BY REQUESTER, ID, OR ITEM..."
-            className="w-full pl-11 pr-4 py-3 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl text-xs font-medium text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 placeholder:text-stone-400 uppercase placeholder:normal-case shadow-sm transition-all"
+            className="w-full pl-11 pr-4 py-3 bg-white/70 dark:bg-stone-900/70 backdrop-blur-sm border border-stone-200 dark:border-stone-800 rounded-2xl text-xs font-medium text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 placeholder:text-stone-400 uppercase placeholder:normal-case shadow-sm transition-all"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value.toUpperCase())}
           />
@@ -315,7 +315,7 @@ export default function RequisitionList({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.98 }}
                 transition={{ delay: Math.min(index * 0.05, 0.3) }}
-                className="bg-white dark:bg-stone-900 rounded-2xl border-t border-b border-stone-200 dark:border-stone-800 shadow-sm overflow-hidden transition-all hover:shadow-md"
+                className="bg-white/70 dark:bg-stone-900/70 backdrop-blur-sm rounded-2xl border-t border-b border-stone-200 dark:border-stone-800 shadow-sm overflow-hidden transition-all hover:shadow-md"
               >
                 <div className="p-4 active:bg-stone-50 dark:active:bg-stone-800 cursor-pointer" onClick={() => toggleExpand(req.id)}>
                   <div className="flex justify-between items-start mb-3">

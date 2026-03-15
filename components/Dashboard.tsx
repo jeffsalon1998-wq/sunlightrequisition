@@ -93,9 +93,9 @@ const Dashboard: React.FC<DashboardProps> = ({ inventory, requisitions, defaultD
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
         >
-          <h2 className="text-2xl md:text-3xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">Operations Hub</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-stone-900 dark:text-stone-100 tracking-tight [text-shadow:0_1px_2px_rgba(255,255,255,0.5)]">Operations Hub</h2>
         </motion.div>
-        <button className="hidden md:flex items-center gap-2 text-[10px] text-stone-500 dark:text-stone-400 font-black uppercase tracking-widest bg-white dark:bg-stone-900 px-4 py-2 rounded-xl border border-stone-200 dark:border-stone-800 shadow-sm hover:border-stone-300 dark:hover:border-stone-700 transition-colors">
+        <button className="hidden md:flex items-center gap-2 text-[10px] text-stone-500 dark:text-stone-400 font-black uppercase tracking-widest bg-white/80 dark:bg-stone-900/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-stone-200/50 dark:border-stone-800/50 shadow-sm hover:border-stone-300 dark:hover:border-stone-700 transition-colors">
           <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
           Live Feed
         </button>
@@ -113,12 +113,12 @@ const Dashboard: React.FC<DashboardProps> = ({ inventory, requisitions, defaultD
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="lg:col-span-2 bg-white/30 dark:bg-stone-900/50 p-5 md:p-8 rounded-3xl shadow-sm border-t border-b border-stone-200 dark:border-stone-800 relative overflow-hidden"
+          className="lg:col-span-2 bg-white/50 dark:bg-stone-900/70 p-5 md:p-8 rounded-3xl shadow-sm border-t border-b border-stone-200/50 dark:border-stone-800/50 relative overflow-hidden"
         >
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h3 className="text-xs font-black text-stone-400 dark:text-stone-500 uppercase tracking-[0.2em]">Departmental Distribution</h3>
-              <p className="text-[10px] text-stone-500 dark:text-stone-400 font-bold uppercase mt-1">{currentMonthName} Activity</p>
+              <h3 className="text-xs font-black text-stone-900 dark:text-stone-100 uppercase tracking-[0.2em] [text-shadow:0_1px_2px_rgba(255,255,255,0.5)]">Departmental Distribution</h3>
+              <p className="text-[10px] text-stone-700 dark:text-stone-300 font-bold uppercase mt-1 [text-shadow:0_1px_2px_rgba(255,255,255,0.5)]">{currentMonthName} Activity</p>
             </div>
           </div>
 
@@ -131,18 +131,18 @@ const Dashboard: React.FC<DashboardProps> = ({ inventory, requisitions, defaultD
                     dataKey="name" 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{fill: '#a8a29e', fontSize: 10, fontWeight: 'bold'}} 
+                    tick={{fill: '#44403c', fontSize: 10, fontWeight: 'bold'}} 
                     dy={10}
                   />
                   <YAxis 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{fill: '#a8a29e', fontSize: 10, fontWeight: 'bold'}} 
+                    tick={{fill: '#44403c', fontSize: 10, fontWeight: 'bold'}} 
                     dx={-10}
                   />
                   <Tooltip 
                     cursor={{fill: 'rgba(168, 162, 158, 0.1)'}}
-                    contentStyle={{backgroundColor: 'var(--tw-bg-opacity, #fff)', borderRadius: '16px', border: '1px solid #e7e5e4', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '11px', fontWeight: 'bold'}}
+                    contentStyle={{backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: '16px', border: '1px solid #e7e5e4', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '11px', fontWeight: 'bold'}}
                     itemStyle={{color: '#4a0404'}}
                   />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
@@ -153,7 +153,7 @@ const Dashboard: React.FC<DashboardProps> = ({ inventory, requisitions, defaultD
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full w-full flex items-center justify-center text-stone-400 text-sm font-medium">
+              <div className="h-full w-full flex items-center justify-center text-stone-800 dark:text-stone-200 text-sm font-bold [text-shadow:0_1px_2px_rgba(255,255,255,0.5)]">
                 No data available
               </div>
             )}
@@ -164,11 +164,11 @@ const Dashboard: React.FC<DashboardProps> = ({ inventory, requisitions, defaultD
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="bg-white/30 dark:bg-stone-900/70 backdrop-blur-sm p-5 md:p-8 rounded-3xl shadow-sm border-t border-b border-stone-200/50 dark:border-stone-800/50 relative overflow-hidden flex flex-col"
+          className="bg-white/10 dark:bg-stone-900/50 backdrop-blur-md p-5 md:p-8 rounded-3xl shadow-sm border-t border-b border-stone-200/20 dark:border-stone-800/20 relative overflow-hidden flex flex-col"
         >
           <div className="mb-4">
-            <h3 className="text-xs font-black text-stone-400 dark:text-stone-500 uppercase tracking-[0.2em]">Status Overview</h3>
-            <p className="text-[10px] text-stone-500 dark:text-stone-400 font-bold uppercase mt-1">Current State</p>
+            <h3 className="text-xs font-black text-stone-900 dark:text-stone-100 uppercase tracking-[0.2em] [text-shadow:0_1px_2px_rgba(255,255,255,0.5)]">Status Overview</h3>
+            <p className="text-[10px] text-stone-700 dark:text-stone-300 font-bold uppercase mt-1 [text-shadow:0_1px_2px_rgba(255,255,255,0.5)]">Current State</p>
           </div>
           
           <div className="flex-1 min-h-[200px] relative">
@@ -189,13 +189,13 @@ const Dashboard: React.FC<DashboardProps> = ({ inventory, requisitions, defaultD
                     ))}
                   </Pie>
                   <Tooltip 
-                    contentStyle={{backgroundColor: 'var(--tw-bg-opacity, #fff)', borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: '11px', fontWeight: 'bold'}}
+                    contentStyle={{backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: '12px', border: '1px solid #e7e5e4', fontSize: '11px', fontWeight: 'bold'}}
                     itemStyle={{color: '#4a0404'}}
                   />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-stone-400 text-sm font-medium">
+              <div className="absolute inset-0 flex items-center justify-center text-stone-800 dark:text-stone-200 text-sm font-bold [text-shadow:0_1px_2px_rgba(255,255,255,0.5)]">
                 No data available
               </div>
             )}
