@@ -1,0 +1,25 @@
+{
+  "entities": {
+    "AppConfig": {
+      "title": "App Configuration",
+      "description": "Global application settings and configuration.",
+      "type": "object",
+      "properties": {
+        "bgUrlDark": {
+          "type": "string",
+          "description": "URL for the background image in dark mode."
+        },
+        "bgUrlLight": {
+          "type": "string",
+          "description": "URL for the background image in light mode."
+        }
+      }
+    }
+  },
+  "firestore": {
+    "config/{configId}": {
+      "schema": "AppConfig",
+      "description": "Collection for application configuration documents."
+    }
+  }
+}

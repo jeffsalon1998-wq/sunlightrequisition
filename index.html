@@ -1,0 +1,212 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunlight Hotel Requisitions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        maroon: {
+                            50: '#fdf2f2',
+                            100: '#fbe5e5',
+                            200: '#f6cccc',
+                            300: '#f0a6a6',
+                            400: '#e67373',
+                            500: '#d94444',
+                            600: '#c22929',
+                            700: '#a31d1d',
+                            800: '#871a1a',
+                            900: '#711a1a',
+                            950: '#4a0404', // Primary
+                        },
+                        gold: {
+                            50: '#fdf9ed',
+                            100: '#fbf0d1',
+                            200: '#f6e0a4',
+                            300: '#efc96d',
+                            400: '#e8b03e',
+                            500: '#d4af37', // Accent
+                            600: '#c58b21',
+                            700: '#a4681e',
+                            800: '#85511e',
+                            900: '#6d421d',
+                            950: '#3f220e',
+                        },
+                        'maroon-bg': '#4a0404', // Deep Burgundy
+                        'maroon-accent-bg': '#2d0202', // Darker Oxblood
+                        'gold-text': '#d4af37', // Burnished Gold
+                        'maroon-text': '#6b0a0a', // Rich Maroon
+                        'gold-bg': '#c5a028', // Deeper Gold for backgrounds
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Great+Vibes&display=swap" rel="stylesheet">
+    <script>
+        // Fix for libraries trying to overwrite window.fetch
+        (function() {
+            const originalFetch = window.fetch;
+            if (originalFetch) {
+                try {
+                    Object.defineProperty(window, 'fetch', {
+                        configurable: true,
+                        enumerable: true,
+                        get: function() {
+                            return originalFetch;
+                        },
+                        set: function() {
+                            console.warn('Something tried to overwrite window.fetch. Ignoring.');
+                        }
+                    });
+                } catch (e) {
+                    console.error('Failed to protect window.fetch:', e);
+                }
+            }
+        })();
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: transparent;
+            color: #1c1917; /* stone-900 */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .maroon-bg { background-color: #4a0404; }
+        .maroon-text { color: #4a0404; }
+        .maroon-border { border-color: #4a0404; }
+        
+        /* Metallic Gold palette - Refined for premium feel and contrast */
+        .gold-bg { background-color: #d4af37; }
+        .gold-text { color: #d4af37; }
+        .yellow-bg { background-color: #d4af37; } 
+        .yellow-text { color: #d4af37; }
+        
+        .maroon-accent-bg { background-color: #2d0202; } 
+        .dark-gray-bg { background-color: #1c1917; } /* stone-900 */
+
+        /* Dark Mode Overrides */
+        .dark body {
+            background-color: transparent;
+            color: #e7e5e4; /* stone-200 */
+        }
+        
+        .dark .bg-white {
+            background-color: #18181b; /* zinc-900 */
+        }
+        
+        .dark .bg-stone-50 {
+            background-color: #09090b; /* zinc-950 */
+        }
+        
+        .dark .border-stone-200, 
+        .dark .border-stone-100 {
+            border-color: #27272a; /* zinc-800 */
+        }
+        
+        .dark .text-stone-800,
+        .dark .text-stone-900 {
+            color: #fafafa; /* zinc-50 */
+        }
+        
+        .dark .text-stone-500,
+        .dark .text-stone-400 {
+            color: #71717a; /* zinc-500 */
+        }
+
+        .dark .bg-stone-100 {
+            background-color: #27272a; /* zinc-800 */
+        }
+
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #3f3f46; /* zinc-700 */
+        }
+        
+        /* Sunlight Logo Refined Typography */
+        .logo-sunlight {
+            font-family: 'Vivaldi', 'Great Vibes', cursive;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+        }
+        .logo-hotel {
+            letter-spacing: 0.4em;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Custom scrollbar for light theme */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e7e5e4; /* stone-200 */
+            border-radius: 10px;
+        }
+
+        /* Smooth transition for active state */
+        .transition-all {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 150ms;
+        }
+
+        /* Glass Morphism Effect */
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        .dark .glass-effect {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Splash animation */
+        @keyframes flourish {
+            0% { opacity: 0; transform: scale(0.9) translateY(10px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-flourish {
+            animation: flourish 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
+    

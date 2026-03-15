@@ -1,0 +1,577 @@
+
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { InventoryItem, Requisition, Department, RequisitionItem, RemarkType } from '../types';
+import { Plus, Trash2, Send, Search, X, Layers, Lock, AlertTriangle, ChevronDown, CalendarDays, CheckCircle2, PenTool } from 'lucide-react';
+import { DEPARTMENTS } from '../constants';
+import { z } from 'zod';
+import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
+import Fuse from 'fuse.js';
+
+const requisitionSchema = z.object({
+  requester: z.string().min(2, "Requester name must be at least 2 characters"),
+  department: z.string().min(1, "Please select a department in settings"),
+  remarks: z.enum(['Urgent', 'PAR Stock', 'Event Stock']),
+  eventDate: z.string().optional().refine((date) => {
+    if (!date) return true;
+    return new Date(date) >= new Date(new Date().setHours(0, 0, 0, 0));
+  }, "Event date cannot be in the past"),
+  eventDetails: z.string().optional(),
+  items: z.array(z.any()).min(1, "At least one item is required")
+});
+
+interface RequisitionFormProps {
+  onSubmit: (requisition: Requisition) => void;
+  inventory: InventoryItem[];
+  defaultDepartment?: Department | null;
+  requisitions: Requisition[];
+}
+
+const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, defaultDepartment = null, requisitions = [] }) => {
+  const [department, setDepartment] = useState<Department | "">(defaultDepartment || "");
+  const [requester, setRequester] = useState('');
+  const [remarks, setRemarks] = useState<RemarkType>('PAR Stock');
+  const [description, setDescription] = useState('');
+  const [items, setItems] = useState<RequisitionItem[]>([]);
+  const [eventDate, setEventDate] = useState('');
+  const [eventDetails, setEventDetails] = useState('');
+  
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemQty, setNewItemQty] = useState<number | string>('');
+  const [newItemUnit, setNewItemUnit] = useState('UNITS');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const formEndRef = useRef<HTMLDivElement>(null);
+
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  const fuse = useMemo(() => new Fuse(inventory, {
+    keys: ['name', 'category'],
+    threshold: 0.3,
+  }), [inventory]);
+
+  useEffect(() => {
+    setDepartment(defaultDepartment || "");
+  }, [defaultDepartment]);
+
+  const selectedInventoryItem = inventory.find(i => i.name.toLowerCase() === newItemName.toLowerCase());
+  const availableStock = selectedInventoryItem ? selectedInventoryItem.stock : Infinity;
+  const currentQty = typeof newItemQty === 'number' ? newItemQty : 0;
+  const isOverStock = newItemName && currentQty > availableStock;
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  };
+
+  const addItem = () => {
+    const qty = typeof newItemQty === 'number' ? newItemQty : parseInt(String(newItemQty));
+    if (!newItemName || !qty || qty <= 0) return;
+    
+    const isInStockList = inventory.some(i => i.name.toLowerCase() === newItemName.toLowerCase());
+    const inventoryItem = inventory.find(i => i.name.toLowerCase() === newItemName.toLowerCase());
+    const unitPrice = inventoryItem ? inventoryItem.pricePerUnit : 0;
+
+    const upperName = newItemName.toUpperCase();
+    const upperUnit = newItemUnit.toUpperCase();
+    const source = isInStockList ? 'Warehouse' : 'Purchase';
+    const estimatedCost = unitPrice * qty;
+
+    // Merge duplicates if item with same name and unit exists
+    const existingIndex = items.findIndex(i => i.name === upperName && i.unit === upperUnit);
+
+    if (existingIndex >= 0) {
+      const updatedItems = [...items];
+      updatedItems[existingIndex].quantity += qty;
+      // Add the cost of the new quantity to the existing cost
+      updatedItems[existingIndex].estimatedCost = (updatedItems[existingIndex].estimatedCost || 0) + estimatedCost;
+      setItems(updatedItems);
+    } else {
+      const item: RequisitionItem = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: upperName,
+        quantity: qty,
+        unit: upperUnit,
+        estimatedCost: estimatedCost,
+        source: source
+      };
+      setItems([...items, item]);
+    }
+    
+    setNewItemName('');
+    setNewItemUnit('UNITS');
+    setNewItemQty('');
+    setSearchQuery('');
+  };
+
+  const removeItem = (id: string) => {
+    setItems(items.filter(i => i.id !== id));
+  };
+
+  const selectInventoryItem = (item: InventoryItem | { name: string; unit: string }) => {
+    setNewItemName(item.name.toUpperCase());
+    setNewItemUnit(item.unit.toUpperCase());
+    setSearchQuery('');
+    setNewItemQty('');
+  };
+
+  const getDepartmentCode = (dept: string): string => {
+    const codes: Record<string, string> = {
+      'Admin': 'ADM',
+      'Cafeteria': 'CAF',
+      'Finance': 'FIN',
+      'F&B Service': 'FNB',
+      'Front Office': 'FRO',
+      'Front Office-Airport Lounge': 'FAL',
+      'Front Office-Kanaten': 'FOK',
+      'Housekeeping': 'HOU',
+      'Human Resource': 'HRM',
+      'Laundry': 'LAU',
+      'Kitchen': 'MK',
+      'POMEC': 'POM',
+      'Purchasing': 'PUR',
+      'Reservation': 'RES',
+      'Security': 'SEC',
+      'Sports & Recreations': 'SNR',
+      'Information Technology': 'IT'
+    };
+    return codes[dept] || dept.substring(0, 3).toUpperCase();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const validation = requisitionSchema.safeParse({
+      requester,
+      department,
+      remarks,
+      eventDate: remarks === 'Event Stock' ? eventDate : undefined,
+      eventDetails: remarks === 'Event Stock' ? eventDetails : undefined,
+      items
+    });
+
+    if (!validation.success) {
+      const errorMsg = validation.error.issues[0].message;
+      toast.error(errorMsg);
+      return;
+    }
+
+    setShowConfirm(true);
+  };
+
+  const confirmSubmit = async () => {
+    setIsSubmitting(true);
+    setShowConfirm(false);
+    
+    try {
+      // Filter items by source to split them if necessary
+      const warehouseItems = items.filter(i => i.source === 'Warehouse');
+      const purchaseItems = items.filter(i => i.source === 'Purchase');
+      
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const deptCode = getDepartmentCode(department);
+      
+      // Count existing requisitions for this department in this month
+      const existingCount = requisitions.filter(r => {
+        if (r.department !== department) return false;
+        const rDate = new Date(r.date);
+        return rDate.getFullYear() === year && rDate.getMonth() === now.getMonth();
+      }).length;
+
+      let offset = 1;
+
+      // Helper to generate and submit
+      const createAndSubmit = (reqItems: RequisitionItem[]) => {
+        const sequence = String(existingCount + offset).padStart(4, '0');
+        const newId = `SGHC ${deptCode}-${year}-${month}-${sequence}`;
+
+        const requisition: Requisition = {
+          id: newId,
+          department: department as Department,
+          requester: requester.toUpperCase(),
+          date: now.toISOString(),
+          items: reqItems,
+          status: 'Pending',
+          remarks,
+          description,
+          eventDate: remarks === 'Event Stock' ? eventDate : undefined,
+          eventDetails: remarks === 'Event Stock' ? eventDetails : undefined
+        };
+
+        onSubmit(requisition);
+        offset++;
+      };
+
+      if (warehouseItems.length > 0) {
+        createAndSubmit(warehouseItems);
+      }
+
+      if (purchaseItems.length > 0) {
+        createAndSubmit(purchaseItems);
+      }
+    } catch (error) {
+      toast.error("Failed to submit requisition");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const filteredInventory = useMemo(() => {
+    if (!searchQuery) return inventory;
+    return fuse.search(searchQuery).map(result => result.item);
+  }, [searchQuery, fuse, inventory]);
+
+  const suggestedRequesters = useMemo(() => {
+    if (!department) return [];
+    const deptRequesters = requisitions
+      .filter(r => r.department === department)
+      .map(r => r.requester);
+    return Array.from(new Set(deptRequesters));
+  }, [department, requisitions]);
+
+  const hasExactMatch = inventory.some(i => i.name.toLowerCase() === searchQuery.toLowerCase());
+  const hasCloseMatch = searchQuery.trim().length > 0 && filteredInventory.length > 0;
+  const shouldShowResults = searchQuery.trim().length > 0;
+
+  return (
+    <div className="max-w-xl mx-auto space-y-4 pb-48 animate-in slide-in-from-bottom-4 duration-700">
+      <div className="flex flex-col px-1">
+        <h2 className="text-2xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">Create Request</h2>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="bg-white/70 dark:bg-stone-900/70 backdrop-blur-sm glass-effect rounded-[24px] border border-stone-200/50 dark:border-stone-800/50 shadow-sm overflow-hidden transition-colors">
+          {/* Top Section: Core Info */}
+          <div className="p-4 md:p-6 space-y-4">
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[8px] font-black text-stone-400 uppercase mb-1 ml-1 tracking-[0.1em]">Staff ID / Name</label>
+                <input 
+                  required
+                  type="text" 
+                  value={requester} 
+                  onChange={e => setRequester(e.target.value.toUpperCase())}
+                  onFocus={handleFocus}
+                  list="requester-suggestions"
+                  className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 focus:border-maroon-bg/30 dark:focus:border-gold-bg/30 focus:bg-white dark:focus:bg-stone-900 outline-none text-xs font-bold text-stone-900 dark:text-stone-100 transition-all placeholder:text-stone-400 uppercase"
+                  placeholder="ENTER STAFF IDENTIFIER"
+                />
+                <datalist id="requester-suggestions">
+                  {suggestedRequesters.map(name => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[8px] font-black text-stone-400 uppercase mb-1 ml-1 tracking-[0.1em]">Department</label>
+                  <div className="w-full bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 px-4 py-2.5 rounded-xl text-xs font-bold flex justify-between items-center cursor-not-allowed">
+                    <span className={department ? "text-stone-500 dark:text-stone-400" : "text-stone-400 dark:text-stone-500 italic"}>
+                      {department || "Set in Settings"}
+                    </span>
+                    <Lock size={12} className="text-stone-300 dark:text-stone-600" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[8px] font-black text-stone-400 uppercase mb-1 ml-1 tracking-[0.1em]">Priority</label>
+                  <select 
+                    value={remarks} 
+                    onChange={e => setRemarks(e.target.value as RemarkType)}
+                    onFocus={handleFocus}
+                    className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-4 py-2.5 rounded-xl text-xs font-bold text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 focus:border-maroon-bg/30 dark:focus:border-gold-bg/30 focus:bg-white dark:focus:bg-stone-900 outline-none appearance-none transition-all"
+                  >
+                    <option value="Urgent">Urgent</option>
+                    <option value="PAR Stock">PAR Stock</option>
+                    <option value="Event Stock">Event Stock</option>
+                  </select>
+                </div>
+              </div>
+
+              {remarks === 'Event Stock' ? (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden space-y-3"
+                >
+                  <div>
+                    <label className="block text-[8px] font-black text-stone-600 dark:text-stone-400 uppercase mb-1 ml-1 tracking-[0.1em] flex items-center gap-1">
+                      <CalendarDays size={10} /> Event Date
+                    </label>
+                    <input 
+                      required
+                      type="date"
+                      min={today}
+                      value={eventDate}
+                      onChange={e => setEventDate(e.target.value)}
+                      onFocus={handleFocus}
+                      className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-4 py-2.5 rounded-xl text-xs font-bold text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 focus:border-maroon-bg/30 dark:focus:border-gold-bg/30 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[8px] font-black text-stone-600 dark:text-stone-400 uppercase mb-1 ml-1 tracking-[0.1em] flex items-center gap-1">
+                      <PenTool size={10} /> Event Details
+                    </label>
+                    <input 
+                      required
+                      type="text"
+                      value={eventDetails}
+                      onChange={e => setEventDetails(e.target.value.toUpperCase())}
+                      onFocus={handleFocus}
+                      className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-4 py-2.5 rounded-xl text-xs font-bold text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 focus:border-maroon-bg/30 dark:focus:border-gold-bg/30 focus:bg-white dark:focus:bg-stone-900 outline-none transition-all placeholder:text-stone-400 uppercase"
+                      placeholder="ENTER EVENT DETAILS"
+                    />
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <label className="block text-[8px] font-black text-stone-600 dark:text-stone-400 uppercase mb-1 ml-1 tracking-[0.1em] flex items-center gap-1">
+                    <PenTool size={10} /> Request Details
+                  </label>
+                  <input 
+                    required
+                    type="text"
+                    value={description}
+                    onChange={e => setDescription(e.target.value.toUpperCase())}
+                    onFocus={handleFocus}
+                    className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-4 py-2.5 rounded-xl text-xs font-bold text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 focus:border-maroon-bg/30 dark:focus:border-gold-bg/30 focus:bg-white dark:focus:bg-stone-900 outline-none transition-all placeholder:text-stone-400 uppercase"
+                    placeholder="ENTER SPECIFIC DETAILS OR REASON"
+                  />
+                </motion.div>
+              )}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="h-px w-full bg-stone-100 dark:bg-stone-800"></div>
+
+          {/* Bottom Section: Resource Selection */}
+          <div className="p-4 md:p-6 bg-stone-50/50 dark:bg-stone-900/50 space-y-4 border-t border-b border-stone-100 dark:border-stone-800">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-1 h-3 gold-bg rounded-full"></div>
+              <h3 className="text-[9px] font-black text-stone-400 uppercase tracking-[0.2em]">Resource Selection</h3>
+            </div>
+
+            <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm space-y-4">
+              <div className="relative">
+                <label className="block text-[8px] font-black text-stone-400 uppercase mb-1.5 ml-1 tracking-widest">Catalog Search</label>
+                <div className="relative">
+                  <input 
+                    ref={searchInputRef}
+                    type="text" 
+                    value={searchQuery || newItemName}
+                    onFocus={handleFocus}
+                    onChange={e => {
+                      const val = e.target.value.toUpperCase();
+                      setSearchQuery(val);
+                      setNewItemName(val);
+                    }}
+                    className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 pl-4 pr-10 py-3 rounded-xl text-xs font-bold text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 focus:bg-white dark:focus:bg-stone-900 transition-all shadow-sm placeholder:text-stone-400 uppercase"
+                    placeholder="SEARCH FOR ITEMS..."
+                  />
+                  {(searchQuery || newItemName) && (
+                    <button 
+                    type="button" 
+                    onClick={() => { setSearchQuery(''); setNewItemName(''); }} 
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-300 hover:text-red-500"
+                    aria-label="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                  )}
+                </div>
+
+                {shouldShowResults && (
+                  <div ref={resultsRef} className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-2xl z-50 flex flex-col max-h-[200px] overflow-hidden animate-in fade-in slide-in-from-top-1">
+                    <div className="overflow-y-auto custom-scrollbar">
+                      {!hasExactMatch && !hasCloseMatch && (
+                        <button type="button" onClick={() => selectInventoryItem({ name: searchQuery, unit: 'UNITS' })} className="w-full flex items-center gap-3 p-3 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors border-b border-stone-50 dark:border-stone-800 group text-left">
+                          <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 transition-colors group-hover:bg-maroon-bg group-hover:text-gold-text"><Plus size={14} strokeWidth={3} /></div>
+                          <div className="flex-1">
+                            <p className="text-[7px] font-black text-red-700 dark:text-red-400 uppercase tracking-widest">Custom Entry</p>
+                            <p className="text-xs font-bold maroon-text dark:text-gold-text italic leading-none">"{searchQuery}"</p>
+                          </div>
+                        </button>
+                      )}
+                      {hasCloseMatch && (
+                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/50">
+                          <p className="text-[9px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest">Did you mean?</p>
+                        </div>
+                      )}
+                      {filteredInventory.map(item => (
+                        <button key={item.id} type="button" onClick={() => selectInventoryItem(item)} className="w-full flex items-center gap-3 p-3 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors border-b border-stone-50 dark:border-stone-800 last:border-0 group text-left">
+                          <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-500 transition-colors group-hover:bg-maroon-bg group-hover:text-gold-text"><Layers size={14} /></div>
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-stone-800 dark:text-stone-200 leading-tight">{item.name}</p>
+                            <p className="text-[8px] font-bold text-stone-400 dark:text-stone-500 mt-0.5 uppercase tracking-widest">{item.stock} {item.unit} available</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-[1fr_2fr_auto] gap-3 items-end">
+                <div>
+                  <label className="block text-[9px] font-black text-stone-400 uppercase mb-1.5 ml-1 tracking-widest">QTY</label>
+                  <input 
+                    type="number" min="0" 
+                    onFocus={handleFocus}
+                    className={`w-full bg-stone-50 dark:bg-stone-950 border ${isOverStock ? 'border-red-500 dark:border-red-500/50' : 'border-stone-200 dark:border-stone-800'} px-3 py-3 rounded-xl text-center text-sm font-black text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 transition-all shadow-sm placeholder:text-stone-400`} 
+                    value={newItemQty}
+                    onChange={e => setNewItemQty(parseInt(e.target.value) || '')}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-black text-stone-400 uppercase mb-1.5 ml-1 tracking-widest">UNIT</label>
+                  <input 
+                    type="text" placeholder="UNITS"
+                    onFocus={handleFocus}
+                    className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-4 py-3 rounded-xl text-xs font-bold text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 transition-all uppercase shadow-sm"
+                    value={newItemUnit}
+                    onChange={e => setNewItemUnit(e.target.value.toUpperCase())}
+                  />
+                </div>
+                <button 
+                  type="button" onClick={addItem} disabled={!newItemName || !newItemQty || (typeof newItemQty === 'number' && newItemQty <= 0)}
+                  className="w-[46px] h-[46px] gold-bg border border-gold-text hover:bg-gold-text maroon-text rounded-xl active:scale-95 disabled:opacity-50 disabled:bg-stone-100 dark:disabled:bg-stone-800 disabled:border-stone-200 dark:disabled:border-stone-700 disabled:text-stone-300 dark:disabled:text-stone-600 transition-all flex items-center justify-center shadow-lg group"
+                  aria-label="Add item to list"
+                >
+                  <Plus size={24} strokeWidth={4} className="transition-transform group-hover:rotate-90" />
+                </button>
+              </div>
+
+              {isOverStock && (
+                <div className="flex items-center gap-1.5 px-3 py-2 bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-900/50 rounded-xl animate-in fade-in slide-in-from-top-1">
+                  <AlertTriangle size={12} className="text-red-600 dark:text-red-400" />
+                  <p className="text-[9px] font-bold text-red-600 dark:text-red-400 uppercase tracking-tight">Warning: Exceeds available stock ({availableStock})</p>
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-stone-50 dark:border-stone-800">
+                <AnimatePresence mode="popLayout">
+                  {items.length > 0 ? (
+                    <div className="space-y-2">
+                      {items.map((item, index) => (
+                        <motion.div 
+                          key={item.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ delay: Math.min(index * 0.05, 0.3) }}
+                          className="flex items-center justify-between p-3 bg-stone-50 dark:bg-stone-800/50 rounded-xl border border-stone-100 dark:border-stone-800 group hover:border-stone-200 dark:hover:border-stone-700 transition-colors"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-8 h-8 rounded-lg bg-[#eab308] text-[#450a0a] font-black flex items-center justify-center text-xs shadow-sm flex-shrink-0">
+                              {item.quantity}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-stone-800 dark:text-stone-200 uppercase">{item.name}</span>
+                                <span className={`px-1.5 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-wider border ${
+                                  item.source === 'Purchase' 
+                                    ? 'bg-[#fef3c7] dark:bg-amber-900/30 text-[#92400e] dark:text-amber-400 border-[#fde68a] dark:border-amber-900/50' 
+                                    : 'bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 border-blue-100 dark:border-blue-900/50'
+                                }`}>
+                                  {item.source}
+                                </span>
+                              </div>
+                              <span className="text-[9px] text-stone-400 dark:text-stone-500 font-black uppercase tracking-[0.2em]">{item.unit}</span>
+                            </div>
+                          </div>
+                          <button 
+                            type="button" 
+                            onClick={() => removeItem(item.id)} 
+                            className="text-stone-300 dark:text-stone-600 hover:text-red-500 dark:hover:text-red-400 transition-colors p-2 hover:bg-white dark:hover:bg-stone-800 rounded-lg"
+                            aria-label={`Remove ${item.name}`}
+                          >
+                              <Trash2 size={16} />
+                          </button>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-center py-4 opacity-30 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl"
+                    >
+                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-stone-400 dark:text-stone-500">List Empty</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {items.length > 0 && (
+          <button 
+            type="submit"
+            disabled={!department || isSubmitting}
+            className="w-full py-4 maroon-accent-bg gold-text rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl hover:shadow-2xl hover:translate-y-[-1px] active:translate-y-[1px] active:scale-[0.99] transition-all flex items-center justify-center gap-3 border border-white/5 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+          >
+            {isSubmitting ? (
+              <div className="w-4 h-4 border-2 border-gold-text border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send size={16} strokeWidth={3} className="rotate-[-10deg]" />
+            )}
+            {isSubmitting ? 'Processing...' : 'Initialize Requisition'}
+          </button>
+        )}
+      </form>
+
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white/80 dark:bg-stone-900/80 backdrop-blur-md w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl border border-stone-100/50 dark:border-stone-800/50 animate-in zoom-in-95 duration-300">
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertTriangle size={32} />
+              </div>
+              <h3 className="text-xl font-black text-stone-900 dark:text-stone-100 uppercase tracking-tight mb-2">Confirm Requisition</h3>
+              <p className="text-stone-500 dark:text-stone-400 text-xs font-medium leading-relaxed">
+                You are about to submit <span className="font-black text-stone-800 dark:text-stone-200">{items.length} items</span> for <span className="font-black text-stone-800 dark:text-stone-200">{department}</span>. This action will notify the purchasing department.
+              </p>
+            </div>
+            <div className="flex border-t border-stone-100 dark:border-stone-800">
+              <button 
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 py-5 text-stone-400 dark:text-stone-500 text-[10px] font-black uppercase tracking-widest hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmSubmit}
+                className="flex-1 py-5 maroon-accent-bg gold-text text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 size={14} />
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div ref={formEndRef} />
+    </div>
+  );
+};
+
+export default RequisitionForm;
