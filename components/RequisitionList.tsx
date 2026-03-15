@@ -330,8 +330,15 @@ export default function RequisitionList({
                         </div>
                       )}
                     </div>
-                    <div className={`text-[9px] font-bold px-2 py-1 rounded-md uppercase ${getRemarkColor(req.remarks)}`}>
-                      {req.remarks}
+                    <div className="flex items-center gap-2">
+                      <div className={`text-[9px] font-bold px-2 py-1 rounded-md uppercase ${getRemarkColor(req.remarks)}`}>
+                        {req.remarks}
+                      </div>
+                      {req.prFor && (
+                        <div className="text-[9px] font-bold px-2 py-1 rounded-md uppercase bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400">
+                          {req.prFor}
+                        </div>
+                      )}
                     </div>
                   </div>
                   

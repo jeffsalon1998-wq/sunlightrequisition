@@ -18,6 +18,7 @@ export const INITIAL_REQUISITIONS: Requisition[] = [
     date: '2024-05-15',
     status: 'In Progress',
     remarks: 'Urgent',
+    prFor: 'Local',
     items: [
       { id: 'itm-1', name: 'Bath Towels', quantity: 50, unit: 'Pieces', estimatedCost: 600, source: 'Warehouse' }
     ],
@@ -30,6 +31,7 @@ export const INITIAL_REQUISITIONS: Requisition[] = [
     date: '2024-05-14',
     status: 'For signing',
     remarks: 'PAR Stock',
+    prFor: 'Local',
     items: [
       { id: 'itm-2', name: 'Wine Glasses', quantity: 24, unit: 'Pieces', estimatedCost: 120, source: 'Warehouse' }
     ]
@@ -41,6 +43,7 @@ export const INITIAL_REQUISITIONS: Requisition[] = [
     date: '2024-05-16',
     status: 'Pending',
     remarks: 'Event Stock',
+    prFor: 'Local',
     eventDate: '2024-06-01',
     items: [
       { id: 'itm-3', name: 'Tennis Balls', quantity: 10, unit: 'Canisters', estimatedCost: 150, source: 'Purchase' }

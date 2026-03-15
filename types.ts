@@ -25,6 +25,8 @@ export type RequestStatus =
 
 export type RemarkType = 'Urgent' | 'PAR Stock' | 'Event Stock';
 
+export type PRForType = 'Local' | 'Manila';
+
 export type ItemSource = 'Warehouse' | 'Purchase';
 
 export interface RequisitionItem {
@@ -45,6 +47,7 @@ export interface Requisition {
   items: RequisitionItem[];
   status: RequestStatus;
   remarks: RemarkType;
+  prFor?: PRForType;
   description?: string;
   eventDate?: string;
   eventDetails?: string;

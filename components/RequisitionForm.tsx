@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { InventoryItem, Requisition, Department, RequisitionItem, RemarkType } from '../types';
+import { InventoryItem, Requisition, Department, RequisitionItem, RemarkType, PRForType } from '../types';
 import { Plus, Trash2, Send, Search, X, Layers, Lock, AlertTriangle, ChevronDown, CalendarDays, CheckCircle2, PenTool } from 'lucide-react';
 import { DEPARTMENTS } from '../constants';
 import { z } from 'zod';
@@ -12,6 +12,7 @@ const requisitionSchema = z.object({
   requester: z.string().min(2, "Requester name must be at least 2 characters"),
   department: z.string().min(1, "Please select a department in settings"),
   remarks: z.enum(['Urgent', 'PAR Stock', 'Event Stock']),
+  prFor: z.enum(['Local', 'Manila']).optional(),
   eventDate: z.string().optional().refine((date) => {
     if (!date) return true;
     return new Date(date) >= new Date(new Date().setHours(0, 0, 0, 0));
@@ -31,6 +32,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
   const [department, setDepartment] = useState<Department | "">(defaultDepartment || "");
   const [requester, setRequester] = useState('');
   const [remarks, setRemarks] = useState<RemarkType>('PAR Stock');
+  const [prFor, setPrFor] = useState<PRForType>('Local');
   const [description, setDescription] = useState('');
   const [items, setItems] = useState<RequisitionItem[]>([]);
   const [eventDate, setEventDate] = useState('');
@@ -151,6 +153,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
       requester,
       department,
       remarks,
+      prFor,
       eventDate: remarks === 'Event Stock' ? eventDate : undefined,
       eventDetails: remarks === 'Event Stock' ? eventDetails : undefined,
       items
@@ -179,18 +182,35 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const deptCode = getDepartmentCode(department);
       
-      // Count existing requisitions for this department in this month
-      const existingCount = requisitions.filter(r => {
+      // Find the maximum sequence number for this department in this month
+      const deptRequisitions = requisitions.filter(r => {
         if (r.department !== department) return false;
         const rDate = new Date(r.date);
         return rDate.getFullYear() === year && rDate.getMonth() === now.getMonth();
-      }).length;
+      });
+
+      let maxSequence = 0;
+      deptRequisitions.forEach(r => {
+        // ID format: SGHC DEPT-YYYY-MM-XXXX
+        const parts = r.id.split('-');
+        if (parts.length >= 4) {
+          const seqPart = parts[3];
+          // Handle cases where there might be a random suffix
+          const seqMatch = seqPart.match(/^(\d+)/);
+          if (seqMatch) {
+            const seq = parseInt(seqMatch[1]);
+            if (!isNaN(seq) && seq > maxSequence) {
+              maxSequence = seq;
+            }
+          }
+        }
+      });
 
       let offset = 1;
 
       // Helper to generate and submit
       const createAndSubmit = (reqItems: RequisitionItem[]) => {
-        const sequence = String(existingCount + offset).padStart(4, '0');
+        const sequence = String(maxSequence + offset).padStart(4, '0');
         const newId = `SGHC ${deptCode}-${year}-${month}-${sequence}`;
 
         const requisition: Requisition = {
@@ -201,6 +221,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
           items: reqItems,
           status: 'Pending',
           remarks,
+          prFor,
           description,
           eventDate: remarks === 'Event Stock' ? eventDate : undefined,
           eventDetails: remarks === 'Event Stock' ? eventDetails : undefined
@@ -271,7 +292,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                 </datalist>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[8px] font-black text-stone-400 uppercase mb-1 ml-1 tracking-[0.1em]">Department</label>
                   <div className="w-full bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 px-4 py-2.5 rounded-xl text-xs font-bold flex justify-between items-center cursor-not-allowed">
@@ -292,6 +313,18 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                     <option value="Urgent">Urgent</option>
                     <option value="PAR Stock">PAR Stock</option>
                     <option value="Event Stock">Event Stock</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[8px] font-black text-stone-400 uppercase mb-1 ml-1 tracking-[0.1em]">PR For</label>
+                  <select 
+                    value={prFor} 
+                    onChange={e => setPrFor(e.target.value as PRForType)}
+                    onFocus={handleFocus}
+                    className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-4 py-2.5 rounded-xl text-xs font-bold text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-maroon-bg/20 dark:focus:ring-gold-bg/20 focus:border-maroon-bg/30 dark:focus:border-gold-bg/30 focus:bg-white dark:focus:bg-stone-900 outline-none appearance-none transition-all"
+                  >
+                    <option value="Local">Local</option>
+                    <option value="Manila">Manila</option>
                   </select>
                 </div>
               </div>

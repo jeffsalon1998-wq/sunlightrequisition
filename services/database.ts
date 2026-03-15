@@ -24,9 +24,6 @@ const getDbUrl = () => {
 const DB_URL = getDbUrl();
 const DB_TOKEN = import.meta.env.VITE_STOCK_DB_TOKEN;
 
-console.log("DEBUG: DB_URL:", DB_URL);
-console.log("DEBUG: DB_TOKEN:", DB_TOKEN ? "DEFINED" : "UNDEFINED");
-
 // Fallback mechanism for when the database is unreachable
 let isUsingFallback = !DB_URL;
 let connectionTested = false;
@@ -64,6 +61,7 @@ export const initDatabase = async () => {
         date TEXT,
         status TEXT,
         remarks TEXT,
+        pr_for TEXT,
         description TEXT,
         items TEXT,
         event_date TEXT,
@@ -133,6 +131,11 @@ export const initDatabase = async () => {
     // Migration: Add rejection_reason column if it doesn't exist
     try {
       await dbClient.execute("ALTER TABLE requisitions ADD COLUMN rejection_reason TEXT");
+    } catch (e) {}
+
+    // Migration: Add pr_for column if it doesn't exist
+    try {
+      await dbClient.execute("ALTER TABLE requisitions ADD COLUMN pr_for TEXT");
     } catch (e) {}
 
     // Ensure default admin password exists
@@ -308,6 +311,7 @@ export const getRequisitions = async (): Promise<Requisition[]> => {
           date: String(row.date),
           status: row.status as any,
           remarks: row.remarks as any,
+          prFor: row.pr_for as any,
           description: String(row.description),
           items: JSON.parse(itemsJsonString),
           eventDate: row.event_date ? String(row.event_date) : undefined,
@@ -321,6 +325,7 @@ export const getRequisitions = async (): Promise<Requisition[]> => {
           date: String(row.date),
           status: row.status as any,
           remarks: row.remarks as any,
+          prFor: row.pr_for as any,
           description: String(row.description),
           items: [],
           eventDate: row.event_date ? String(row.event_date) : undefined,
@@ -334,23 +339,19 @@ export const getRequisitions = async (): Promise<Requisition[]> => {
 };
 
 export const saveRequisitionDb = async (req: Requisition) => {
-  console.log("DEBUG: saveRequisitionDb called. isUsingFallback:", isUsingFallback, "dbClient:", !!dbClient);
   if (isUsingFallback || !dbClient) {
-    console.log("DEBUG: Saving to localStorage fallback");
     const requisitions = await getRequisitions();
     const updated = [req, ...requisitions];
     localStorage.setItem(LS_REQUISITIONS, JSON.stringify(updated));
     return;
   }
   try {
-    console.log("DEBUG: Attempting to save to DB");
     await dbClient.execute({
-      sql: "INSERT INTO requisitions (id, department, requester, date, status, remarks, description, items, event_date, rejection_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      args: [req.id, req.department, req.requester, req.date, req.status, req.remarks, req.description || "", JSON.stringify(req.items), req.eventDate || null, req.rejectionReason || null]
+      sql: "INSERT OR REPLACE INTO requisitions (id, department, requester, date, status, remarks, pr_for, description, items, event_date, rejection_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      args: [req.id, req.department, req.requester, req.date, req.status, req.remarks, req.prFor || null, req.description || "", JSON.stringify(req.items), req.eventDate || null, req.rejectionReason || null]
     });
-    console.log("DEBUG: Successfully saved to DB");
   } catch (err) {
-    console.error("DEBUG: Failed to save to DB:", err);
+    console.error("Failed to save to DB:", err);
     throw err;
   }
 };
@@ -363,8 +364,8 @@ export const updateRequisitionDb = async (req: Requisition) => {
     return;
   }
   await dbClient.execute({
-    sql: "UPDATE requisitions SET department = ?, requester = ?, date = ?, status = ?, remarks = ?, description = ?, items = ?, event_date = ?, rejection_reason = ? WHERE id = ?",
-    args: [req.department, req.requester, req.date, req.status, req.remarks, req.description || "", JSON.stringify(req.items), req.eventDate || null, req.rejectionReason || null, req.id]
+    sql: "UPDATE requisitions SET department = ?, requester = ?, date = ?, status = ?, remarks = ?, pr_for = ?, description = ?, items = ?, event_date = ?, rejection_reason = ? WHERE id = ?",
+    args: [req.department, req.requester, req.date, req.status, req.remarks, req.prFor || null, req.description || "", JSON.stringify(req.items), req.eventDate || null, req.rejectionReason || null, req.id]
   });
 };
 

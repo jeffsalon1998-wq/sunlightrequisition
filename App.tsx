@@ -219,8 +219,6 @@ function AppContent() {
       ? (bgConfig.bgUrlDark || import.meta.env.VITE_BG_URL_DARK) 
       : (bgConfig.bgUrlLight || import.meta.env.VITE_BG_URL_LIGHT || 'https://i.ibb.co/FkH6MZVk/486295351-1190977103027465-6274870662942126036-n-1.jpg');
 
-    console.log('DEBUG: isDarkMode:', isDarkMode, 'bgUrl:', bgUrl);
-
     if (bgUrl) {
       const tint = isDarkMode ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.0)';
       document.body.style.backgroundImage = `linear-gradient(${tint}, ${tint}), url(${bgUrl})`;
@@ -282,8 +280,7 @@ function AppContent() {
 
   // Add a log to detect if AppContent re-mounts
   useEffect(() => {
-    console.log('DEBUG: AppContent mounted');
-    return () => console.log('DEBUG: AppContent unmounted');
+    return () => {};
   }, []);
 
   const handleSync = useCallback(async (silent = false) => {
