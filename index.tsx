@@ -4,6 +4,16 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ThemeProvider } from './src/components/ThemeProvider';
 import { Toaster } from 'sonner';
+import { registerSW } from 'virtual:pwa-register';
+
+const updateSW = registerSW({
+  onNeedRefresh() {
+    // Optional: Prompt user to refresh
+  },
+  onOfflineReady() {
+    console.log('App is ready to work offline');
+  },
+});
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

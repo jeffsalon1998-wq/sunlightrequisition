@@ -22,6 +22,7 @@ import Header from './src/components/Header';
 import { useTheme } from './src/components/ThemeProvider';
 import { SunlightTextLogo } from './src/components/SunlightTextLogo';
 import { MaintenanceScreen } from './src/components/MaintenanceScreen';
+import { OfflineScreen } from './src/components/OfflineScreen';
 import { useDatabaseInit } from './src/hooks/useDatabaseInit';
 import { auth } from './src/firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
@@ -97,7 +98,21 @@ export default function App() {
 
 function AppContent() {
   const [activeView, setActiveView] = useState<View>('requisitions');
-  
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const { 
     inventory, 
     setInventory, 
@@ -353,6 +368,10 @@ function AppContent() {
 
 
 
+  if (!isOnline) {
+    return <OfflineScreen />;
+  }
+
   if (isLoading) {
     return <LoadingScreen />;
   }
@@ -368,7 +387,7 @@ function AppContent() {
             : error.message}
         </p>
         <button 
-          onClick={() => window.location.reload()}
+          onClick={() => handleCloudSync()}
           className="mt-6 px-4 py-2 bg-gold-bg text-stone-900 font-bold rounded-lg hover:bg-gold-bg/90 transition-colors"
         >
           Retry Connection
