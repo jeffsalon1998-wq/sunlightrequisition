@@ -283,8 +283,7 @@ export const getInventory = async (): Promise<InventoryItem[]> => {
           unit: String(row.uom || 'Units'),
           pricePerUnit: Number(row.unitCost || 0)
         };
-      })
-      .filter(item => item.stock > 0);
+      });
   } catch (error) {
     return [];
   }

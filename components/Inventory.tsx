@@ -25,7 +25,7 @@ const Inventory: React.FC<InventoryProps> = ({ inventory }) => {
     return inventory.filter(item => {
       const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+      return matchesSearch && matchesCategory && item.stock > 0;
     });
   }, [inventory, searchQuery, selectedCategory]);
 

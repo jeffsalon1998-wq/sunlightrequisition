@@ -246,9 +246,12 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
   };
 
   const filteredInventory = useMemo(() => {
-    if (!searchQuery) return inventory;
-    return fuse.search(searchQuery).map(result => result.item);
-  }, [searchQuery, fuse, inventory]);
+    const items = prFor === 'Manila' ? inventory : inventory.filter(i => i.stock > 0);
+    if (!searchQuery) return items;
+    
+    const results = fuse.search(searchQuery).map(result => result.item);
+    return results.filter(item => prFor === 'Manila' || item.stock > 0);
+  }, [searchQuery, fuse, inventory, prFor]);
 
   const suggestedRequesters = useMemo(() => {
     if (!department) return [];
