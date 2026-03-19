@@ -222,14 +222,22 @@ export default function RequisitionList({
     }
   };
 
-  const nextStatusMap: Record<RequestStatus, RequestStatus | null> = {
-    'Pending': 'For signing',
-    'For signing': 'In Progress',
-    'In Progress': 'Ready for Pickup',
-    'Ready for Pickup': 'Completed',
-    'Completed': null,
-    'Rejected': 'Pending',
-    'For Justification': 'Pending'
+  const getNextStatus = (req: Requisition): RequestStatus | null => {
+    if (req.prFor === 'Manila') {
+      if (req.status === 'Pending') return 'Completed';
+      return null;
+    }
+    
+    const nextStatusMap: Record<RequestStatus, RequestStatus | null> = {
+      'Pending': 'For signing',
+      'For signing': 'In Progress',
+      'In Progress': 'Ready for Pickup',
+      'Ready for Pickup': 'Completed',
+      'Completed': null,
+      'Rejected': 'Pending',
+      'For Justification': 'Pending'
+    };
+    return nextStatusMap[req.status] || null;
   };
 
 
@@ -576,13 +584,13 @@ export default function RequisitionList({
                           </div>
                         )}
 
-                        {!isCurrentlyEditing && isAdmin && nextStatusMap[req.status] && (
+                        {!isCurrentlyEditing && isAdmin && getNextStatus(req) && (
                           <button 
-                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(req.id, nextStatusMap[req.status]!); }}
+                            onClick={(e) => { e.stopPropagation(); handleStatusUpdate(req.id, getNextStatus(req)!); }}
                             disabled={isProcessing}
                             className="w-full py-4 maroon-accent-bg gold-text rounded-xl font-black text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg border border-red-900/10 disabled:opacity-50"
                           >
-                            {isProcessing ? 'Processing...' : `Process to ${nextStatusMap[req.status]}`} 
+                            {isProcessing ? 'Processing...' : `Process to ${getNextStatus(req)}`} 
                             {!isProcessing && <ArrowRight size={14} strokeWidth={3} />}
                           </button>
                         )}
