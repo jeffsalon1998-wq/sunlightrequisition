@@ -23,12 +23,13 @@ const requisitionSchema = z.object({
 
 interface RequisitionFormProps {
   onSubmit: (requisition: Requisition) => void;
+  onUpdate: (requisition: Requisition) => void;
   inventory: InventoryItem[];
   defaultDepartment?: Department | null;
   requisitions: Requisition[];
 }
 
-const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, defaultDepartment = null, requisitions = [] }) => {
+const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, onUpdate, inventory, defaultDepartment = null, requisitions = [] }) => {
   const [department, setDepartment] = useState<Department | "">(defaultDepartment || "");
   const [requester, setRequester] = useState('');
   const [remarks, setRemarks] = useState<RemarkType>('PAR Stock');
@@ -232,11 +233,43 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
       };
 
       if (warehouseItems.length > 0) {
-        createAndSubmit(warehouseItems);
+        const existingWarehousePending = requisitions.find(r => 
+          r.department === department && 
+          r.requester.toLowerCase() === requester.toLowerCase() && 
+          r.status === 'Pending' &&
+          r.remarks === remarks &&
+          r.prFor === prFor &&
+          r.items.every(i => i.source === 'Warehouse')
+        );
+
+        if (existingWarehousePending) {
+          const updatedItems = [...existingWarehousePending.items, ...warehouseItems];
+          const updatedReq = { ...existingWarehousePending, items: updatedItems };
+          onUpdate(updatedReq);
+          toast.success('Warehouse items added to existing requisition');
+        } else {
+          createAndSubmit(warehouseItems);
+        }
       }
 
       if (purchaseItems.length > 0) {
-        createAndSubmit(purchaseItems);
+        const existingPurchasePending = requisitions.find(r => 
+          r.department === department && 
+          r.requester.toLowerCase() === requester.toLowerCase() && 
+          r.status === 'Pending' &&
+          r.remarks === remarks &&
+          r.prFor === prFor &&
+          r.items.every(i => i.source === 'Purchase')
+        );
+
+        if (existingPurchasePending) {
+          const updatedItems = [...existingPurchasePending.items, ...purchaseItems];
+          const updatedReq = { ...existingPurchasePending, items: updatedItems };
+          onUpdate(updatedReq);
+          toast.success('Purchase items added to existing requisition');
+        } else {
+          createAndSubmit(purchaseItems);
+        }
       }
     } catch (error) {
       toast.error("Failed to submit requisition");

@@ -453,6 +453,7 @@ function AppContent() {
               {activeView === 'new-request' && (
                 <RequisitionForm 
                   onSubmit={handleNewRequisition} 
+                  onUpdate={handleUpdateRequisition}
                   inventory={inventory} 
                   defaultDepartment={defaultDept}
                   requisitions={requisitions}
