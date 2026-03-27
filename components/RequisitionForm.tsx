@@ -262,7 +262,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
   }, [department, requisitions]);
 
   const hasExactMatch = inventory.some(i => i.name.toLowerCase() === searchQuery.toLowerCase());
-  const hasCloseMatch = searchQuery.trim().length > 0 && filteredInventory.length > 0;
+  const hasCloseMatch = searchQuery.trim().length > 0 && filteredInventory.length > 0 && !hasExactMatch;
   const shouldShowResults = searchQuery.trim().length > 0;
 
   return (
@@ -434,7 +434,7 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, inventory, 
                 {shouldShowResults && (
                   <div ref={resultsRef} className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-2xl z-50 flex flex-col max-h-[200px] overflow-hidden animate-in fade-in slide-in-from-top-1">
                     <div className="overflow-y-auto custom-scrollbar">
-                      {!hasExactMatch && !hasCloseMatch && (
+                      {!hasExactMatch && (
                         <button type="button" onClick={() => selectInventoryItem({ name: searchQuery, unit: 'UNITS' })} className="w-full flex items-center gap-3 p-3 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors border-b border-stone-50 dark:border-stone-800 group text-left">
                           <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 transition-colors group-hover:bg-maroon-bg group-hover:text-gold-text"><Plus size={14} strokeWidth={3} /></div>
                           <div className="flex-1">

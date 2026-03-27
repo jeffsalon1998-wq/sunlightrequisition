@@ -17,6 +17,7 @@ import RequisitionList from './components/RequisitionList';
 import RequisitionForm from './components/RequisitionForm';
 import Inventory from './components/Inventory';
 import Settings from './components/Settings';
+import DepartmentHead from './src/components/DepartmentHead';
 import Sidebar from './src/components/Sidebar';
 import Header from './src/components/Header';
 import { useTheme } from './src/components/ThemeProvider';
@@ -38,7 +39,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient();
 
-type View = 'dashboard' | 'requisitions' | 'new-request' | 'inventory' | 'settings';
+type View = 'dashboard' | 'requisitions' | 'new-request' | 'inventory' | 'department-head' | 'settings';
 
 const LoadingScreen = () => (
   <div className="fixed inset-0 z-[100] bg-[#1a0000] flex flex-col items-center justify-center overflow-hidden">
@@ -168,6 +169,17 @@ function AppContent() {
     bgUrlDark: import.meta.env.VITE_BG_URL_DARK || '',
     bgUrlLight: import.meta.env.VITE_BG_URL_LIGHT || 'https://i.ibb.co/FkH6MZVk/486295351-1190977103027465-6274870662942126036-n-1.jpg'
   });
+  const [departmentHeads, setDepartmentHeads] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const loadDeptHeads = async () => {
+      const saved = await getConfig('department_heads');
+      if (saved) {
+        setDepartmentHeads(saved);
+      }
+    };
+    loadDeptHeads();
+  }, []);
 
   useEffect(() => {
     const loadBgConfig = async () => {
@@ -227,6 +239,12 @@ function AppContent() {
     setBgConfig(config);
     await saveConfig('bg_config', config);
     toast.success('Background settings updated');
+  };
+
+  const handleSaveDeptHeads = async (heads: Record<string, string>) => {
+    setDepartmentHeads(heads);
+    await saveConfig('department_heads', heads);
+    toast.success('Department heads updated successfully');
   };
 
   useEffect(() => {
@@ -398,7 +416,7 @@ function AppContent() {
 
   return (
     <div className="flex flex-col md:flex-row h-screen bg-transparent dark:bg-stone-950/10 font-sans text-stone-900 dark:text-stone-100 animate-in fade-in duration-500 transition-colors">
-      <Sidebar activeView={activeView} setActiveView={setActiveView as (view: string) => void} />
+      <Sidebar activeView={activeView} setActiveView={setActiveView as (view: string) => void} defaultDept={defaultDept} />
       <div className="flex-1 flex flex-col min-w-0 order-first md:order-none">
         <Header
           defaultDept={defaultDept}
@@ -441,6 +459,13 @@ function AppContent() {
                 />
               )}
               {activeView === 'inventory' && <Inventory inventory={inventory} />}
+              {activeView === 'department-head' && (
+                <DepartmentHead 
+                  availableDepartments={availableDepartments}
+                  departmentHeads={departmentHeads}
+                  onSave={handleSaveDeptHeads}
+                />
+              )}
               {activeView === 'settings' && (
                 <Settings 
                   defaultDept={defaultDept} 

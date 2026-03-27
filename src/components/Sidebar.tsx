@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, ClipboardList, Plus, Package, Settings as SettingsIcon, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Plus, Package, Settings as SettingsIcon, Menu, ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { SunlightTextLogo } from './SunlightTextLogo';
 import { motion } from 'framer-motion';
 
 interface SidebarProps {
   activeView: string;
   setActiveView: (view: string) => void;
+  defaultDept?: string | null;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, defaultDept }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const navItems = [
@@ -16,6 +17,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
     { id: 'requisitions', icon: ClipboardList, label: 'Requisitions' },
     { id: 'new-request', icon: Plus, label: 'New Request' },
     { id: 'inventory', icon: Package, label: 'Inventory' },
+    ...(defaultDept === 'Purchasing' ? [{ id: 'department-head', icon: Users, label: 'Department Heads' }] : []),
     { id: 'settings', icon: SettingsIcon, label: 'Settings' },
   ];
 
