@@ -1,2 +1,0 @@
-export const DB_URL = "libsql://warehousekimi-vercel-icfg-tf7wnf43zngjwvbur4t9rp6n.aws-us-east-1.turso.io";
-export const DB_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzUwMzc2NzIsImlkIjoiMDE5Y2E3OGUtNDgwMS03OWU1LWE5YzUtYWJhY2I3OTI3YzEwIiwicmlkIjoiNDBlYjZkNTMtYWVlYi00NDQ3LWE3OGYtNDA3ZTZlOTkxM2U2In0.t9JpuUguomy0WVAp1HzPnsE3b46qAbMiS4ocV2g2lZVhf1pmA28Wm6sFyYHVbXsdZcFOR7IPhbaRxEgi9BE5Bg";
