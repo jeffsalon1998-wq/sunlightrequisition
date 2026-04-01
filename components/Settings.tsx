@@ -19,6 +19,7 @@ interface SettingsProps {
   onUpdateBgConfig: (config: { bgUrlDark?: string; bgUrlLight?: string }) => void;
   user: User | null;
   onLogin: () => void;
+  onDeviceLogout: () => void;
 }
 
 type VerifyingAction = 'save_settings' | 'activate_admin' | 'set_dept_password' | null;
@@ -34,7 +35,8 @@ export default function Settings({
   bgConfig,
   onUpdateBgConfig,
   user,
-  onLogin
+  onLogin,
+  onDeviceLogout
 }: SettingsProps) {
   const [selectedDept, setSelectedDept] = useState<Department | null>(defaultDept);
   const [password, setPassword] = useState('');
@@ -210,6 +212,14 @@ export default function Settings({
             ) : (
               <button disabled={!!verifyingAction} onClick={() => startVerification('activate_admin')} className="px-3 py-1.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 rounded-lg text-[9px] font-black uppercase tracking-wider hover:border-maroon-bg/50 dark:hover:border-gold-bg/50 hover:text-maroon-bg dark:hover:text-gold-text transition-all shadow-sm disabled:opacity-50">Auth</button>
             )}
+          </div>
+
+          <div className="p-3 bg-stone-50 dark:bg-stone-950 rounded-xl border border-stone-100 dark:border-stone-800 flex items-center justify-between transition-colors">
+            <div>
+              <h4 className="text-[10px] font-black text-stone-800 dark:text-stone-200 uppercase tracking-tight">Device Session</h4>
+              <p className="text-[8px] text-stone-500 dark:text-stone-400 font-medium italic">Log out of this device</p>
+            </div>
+            <button onClick={onDeviceLogout} className="px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors">Logout</button>
           </div>
         </section>
 

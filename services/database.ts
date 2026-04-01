@@ -190,7 +190,11 @@ export const getDeviceDepartment = async (): Promise<string | null> => {
 };
 
 export const saveDepartmentPassword = async (department: string, password: string) => {
-  if (isUsingFallback || !dbClient) return;
+  if (!connectionTested) await initDatabase();
+  if (isUsingFallback || !dbClient) {
+    localStorage.setItem(`sunlight_dept_pass_${department}`, password);
+    return;
+  }
   try {
     await dbClient.execute({
       sql: "INSERT OR REPLACE INTO app_config (key, value) VALUES (?, ?)",
@@ -198,11 +202,16 @@ export const saveDepartmentPassword = async (department: string, password: strin
     });
   } catch (error) {
     console.error("Error saving department password:", error);
+    localStorage.setItem(`sunlight_dept_pass_${department}`, password);
   }
 };
 
 export const verifyDepartmentPassword = async (department: string, password: string): Promise<boolean> => {
-  if (isUsingFallback || !dbClient) return false;
+  if (!connectionTested) await initDatabase();
+  if (isUsingFallback || !dbClient) {
+    const saved = localStorage.getItem(`sunlight_dept_pass_${department}`);
+    return saved === password;
+  }
   try {
     const result = await dbClient.execute({
       sql: "SELECT value FROM app_config WHERE key = ?",
@@ -214,13 +223,25 @@ export const verifyDepartmentPassword = async (department: string, password: str
     return false;
   } catch (error) {
     console.error("Error verifying department password:", error);
-    return false;
+    const saved = localStorage.getItem(`sunlight_dept_pass_${department}`);
+    return saved === password;
   }
 };
 
 export const getDepartmentsFromConfig = async (): Promise<Department[]> => {
   if (!connectionTested) await initDatabase();
-  if (isUsingFallback || !dbClient) return [];
+  if (isUsingFallback || !dbClient) {
+    const saved = localStorage.getItem('sunlight_config_system_config');
+    if (saved) {
+      try {
+        const config = JSON.parse(saved);
+        if (config.departments && Array.isArray(config.departments)) {
+          return config.departments as Department[];
+        }
+      } catch (e) {}
+    }
+    return [];
+  }
   try {
     const result = await dbClient.execute("SELECT value_json FROM config WHERE key = 'system_config'");
     if (result.rows.length > 0) {
@@ -235,12 +256,25 @@ export const getDepartmentsFromConfig = async (): Promise<Department[]> => {
     if (!(error instanceof Error && error.message.includes('fetch'))) {
       console.error("Error fetching departments from config:", error);
     }
+    const saved = localStorage.getItem('sunlight_config_system_config');
+    if (saved) {
+      try {
+        const config = JSON.parse(saved);
+        if (config.departments && Array.isArray(config.departments)) {
+          return config.departments as Department[];
+        }
+      } catch (e) {}
+    }
     return [];
   }
 };
 
 export const saveConfig = async (key: string, value: any) => {
-  if (isUsingFallback || !dbClient) return;
+  if (!connectionTested) await initDatabase();
+  if (isUsingFallback || !dbClient) {
+    localStorage.setItem(`sunlight_config_${key}`, JSON.stringify(value));
+    return;
+  }
   try {
     await dbClient.execute({
       sql: "INSERT OR REPLACE INTO config (key, value_json) VALUES (?, ?)",
@@ -248,11 +282,16 @@ export const saveConfig = async (key: string, value: any) => {
     });
   } catch (error) {
     console.error("Error saving config:", error);
+    localStorage.setItem(`sunlight_config_${key}`, JSON.stringify(value));
   }
 };
 
 export const getConfig = async (key: string): Promise<any | null> => {
-  if (isUsingFallback || !dbClient) return null;
+  if (!connectionTested) await initDatabase();
+  if (isUsingFallback || !dbClient) {
+    const saved = localStorage.getItem(`sunlight_config_${key}`);
+    return saved ? JSON.parse(saved) : null;
+  }
   try {
     const result = await dbClient.execute({
       sql: "SELECT value_json FROM config WHERE key = ?",
@@ -264,7 +303,8 @@ export const getConfig = async (key: string): Promise<any | null> => {
     return null;
   } catch (error) {
     console.error("Error fetching config:", error);
-    return null;
+    const saved = localStorage.getItem(`sunlight_config_${key}`);
+    return saved ? JSON.parse(saved) : null;
   }
 };
 
@@ -413,6 +453,7 @@ export const updateStatusDb = async (id: string, status: string, reason?: string
 };
 
 export const verifyAdminPassword = async (password: string): Promise<boolean> => {
+  if (!connectionTested) await initDatabase();
   if (isUsingFallback || !dbClient) {
     return password === (import.meta.env.VITE_ADMIN_PASSWORD || 'luxe123');
   }

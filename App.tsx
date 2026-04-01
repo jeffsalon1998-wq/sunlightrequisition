@@ -134,7 +134,18 @@ function AppContent() {
 
   const [defaultDept, setDefaultDept] = useState<Department | null>(null);
   const [deptPassword, setDeptPassword] = useState('');
-  const [isDeptAuthenticated, setIsDeptAuthenticated] = useState(false);
+  const [isDeptAuthenticated, setIsDeptAuthenticated] = useState(() => {
+    const authData = localStorage.getItem('sunlight_dept_auth');
+    if (authData) {
+      try {
+        const parsed = JSON.parse(authData);
+        if (parsed.expires > Date.now()) {
+          return true;
+        }
+      } catch (e) {}
+    }
+    return false;
+  });
   const [isManualAdmin, setIsManualAdmin] = useState<boolean>(() => {
     const saved = localStorage.getItem('sunlight_is_admin');
     return saved === 'true';
@@ -412,6 +423,9 @@ function AppContent() {
     if (isValid) {
       setDefaultDept(dept);
       setIsDeptAuthenticated(true);
+      localStorage.setItem('sunlight_dept_auth', JSON.stringify({
+        expires: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
+      }));
       toast.success(`Logged into ${dept}`);
     } else {
       toast.error('Invalid password');
@@ -545,6 +559,13 @@ function AppContent() {
                   onUpdateBgConfig={handleUpdateBgConfig}
                   user={user}
                   onLogin={handleLogin}
+                  onDeviceLogout={() => {
+                    localStorage.removeItem('sunlight_dept_auth');
+                    localStorage.removeItem('sunlight_default_dept');
+                    setIsDeptAuthenticated(false);
+                    setDefaultDept(null);
+                    toast.success('Logged out of device');
+                  }}
                 />
               )}
             </motion.div>
