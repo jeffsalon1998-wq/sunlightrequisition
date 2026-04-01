@@ -30,7 +30,11 @@ import {
   updateRequisitionDb, 
   updateStatusDb,
   saveConfig,
-  getConfig
+  getConfig,
+  getDepartmentPasswords,
+  saveDepartmentPassword,
+  verifyAdminPassword,
+  verifyDepartmentPassword
 } from './services/database';
 import { Toaster, toast } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -131,6 +135,7 @@ function AppContent() {
     const saved = localStorage.getItem('sunlight_default_dept');
     return saved ? (saved as Department) : null;
   });
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('sunlight_default_dept'));
   const [isManualAdmin, setIsManualAdmin] = useState<boolean>(() => {
     const saved = localStorage.getItem('sunlight_is_admin');
     return saved === 'true';
@@ -167,15 +172,18 @@ function AppContent() {
     bgUrlLight: import.meta.env.VITE_BG_URL_LIGHT || 'https://i.ibb.co/FkH6MZVk/486295351-1190977103027465-6274870662942126036-n-1.jpg'
   });
   const [departmentHeads, setDepartmentHeads] = useState<Record<string, string>>({});
+  const [departmentPasswords, setDepartmentPasswords] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const loadDeptHeads = async () => {
-      const saved = await getConfig('department_heads');
-      if (saved) {
-        setDepartmentHeads(saved);
-      }
+    const loadDeptData = async () => {
+      const [heads, passwords] = await Promise.all([
+        getConfig('department_heads'),
+        getDepartmentPasswords()
+      ]);
+      if (heads) setDepartmentHeads(heads);
+      if (passwords) setDepartmentPasswords(passwords);
     };
-    loadDeptHeads();
+    loadDeptData();
   }, []);
 
   useEffect(() => {
@@ -221,10 +229,25 @@ function AppContent() {
     toast.success('Background settings updated');
   };
 
-  const handleSaveDeptHeads = async (heads: Record<string, string>) => {
-    setDepartmentHeads(heads);
-    await saveConfig('department_heads', heads);
-    toast.success('Department heads updated successfully');
+  const handleSaveDeptHeads = async (heads: Record<string, string>, passwords: Record<string, string>) => {
+    try {
+      setDepartmentHeads(heads);
+      setDepartmentPasswords(passwords);
+      
+      // Save heads to config
+      await saveConfig('department_heads', heads);
+      
+      // Save each password to app_config
+      const savePromises = Object.entries(passwords).map(([dept, pass]) => 
+        saveDepartmentPassword(dept as Department, pass)
+      );
+      await Promise.all(savePromises);
+      
+      toast.success('Department management updated successfully');
+    } catch (error) {
+      console.error('Failed to save department data:', error);
+      toast.error('Failed to save changes');
+    }
   };
 
   useEffect(() => {
@@ -366,6 +389,34 @@ function AppContent() {
 
 
 
+  const handleDeptLogin = async (dept: Department, password: string) => {
+    try {
+      const isAdminPass = await verifyAdminPassword(password);
+      const isDeptPass = await verifyDepartmentPassword(dept, password);
+      
+      if (isAdminPass || isDeptPass) {
+        setDefaultDept(dept);
+        setIsLoggedIn(true);
+        if (isAdminPass) setIsManualAdmin(true);
+        toast.success(`Logged in as ${dept}`);
+      } else {
+        toast.error('Invalid password');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Login failed');
+    }
+  };
+
+  const handleLogout = () => {
+    setDefaultDept(null);
+    setIsLoggedIn(false);
+    setIsManualAdmin(false);
+    localStorage.removeItem('sunlight_default_dept');
+    localStorage.removeItem('sunlight_is_admin');
+    toast.success('Logged out successfully');
+  };
+
   if (!isOnline) {
     return <OfflineScreen />;
   }
@@ -394,9 +445,48 @@ function AppContent() {
     );
   }
 
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-[32px] shadow-2xl border border-stone-100 overflow-hidden">
+          <div className="p-8 text-center bg-stone-900 text-white">
+            <SunlightTextLogo light />
+            <p className="text-xs text-stone-400 mt-2 font-medium tracking-widest uppercase">Department Access</p>
+          </div>
+          <form className="p-8 space-y-6" onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleDeptLogin(formData.get('dept') as Department, formData.get('password') as string);
+          }}>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-stone-400 uppercase mb-2 ml-1 tracking-widest">Select Department</label>
+                <select name="dept" required className="w-full bg-stone-50 border border-stone-200 px-4 py-3 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-maroon-bg/10 outline-none appearance-none transition-all">
+                  {availableDepartments.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-stone-400 uppercase mb-2 ml-1 tracking-widest">Password</label>
+                <input name="password" type="password" required placeholder="Enter password..." className="w-full bg-stone-50 border border-stone-200 px-4 py-3 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-maroon-bg/10 outline-none transition-all" />
+              </div>
+            </div>
+            <button type="submit" className="w-full py-4 maroon-accent-bg gold-text rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-transform">
+              Enter Dashboard
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col md:flex-row h-screen bg-transparent dark:bg-stone-950/10 font-sans text-stone-900 dark:text-stone-100 animate-in fade-in duration-500 transition-colors">
-      <Sidebar activeView={activeView} setActiveView={setActiveView as (view: string) => void} defaultDept={defaultDept} />
+      <Sidebar 
+        activeView={activeView} 
+        setActiveView={setActiveView as (view: string) => void} 
+        defaultDept={defaultDept}
+        isAdmin={isAdmin}
+      />
       <div className="flex-1 flex flex-col min-w-0 order-first md:order-none">
         <Header
           defaultDept={defaultDept}
@@ -444,6 +534,7 @@ function AppContent() {
                 <DepartmentHead 
                   availableDepartments={availableDepartments}
                   departmentHeads={departmentHeads}
+                  departmentPasswords={departmentPasswords}
                   onSave={handleSaveDeptHeads}
                 />
               )}
@@ -458,6 +549,7 @@ function AppContent() {
                   onThemeToggle={(active) => setTheme(active ? 'dark' : 'light')}
                   bgConfig={bgConfig}
                   onUpdateBgConfig={handleUpdateBgConfig}
+                  onLogout={handleLogout}
                 />
               )}
             </motion.div>

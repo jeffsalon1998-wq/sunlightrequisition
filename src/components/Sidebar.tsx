@@ -7,9 +7,10 @@ interface SidebarProps {
   activeView: string;
   setActiveView: (view: string) => void;
   defaultDept?: string | null;
+  isAdmin?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, defaultDept }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, defaultDept, isAdmin }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const navItems = [
@@ -17,7 +18,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, defaultDep
     { id: 'requisitions', icon: ClipboardList, label: 'Requisitions' },
     { id: 'new-request', icon: Plus, label: 'New Request' },
     { id: 'inventory', icon: Package, label: 'Inventory' },
-    ...(defaultDept === 'Purchasing' ? [{ id: 'department-head', icon: Users, label: 'Department Heads' }] : []),
+    ...(defaultDept === 'Purchasing' || isAdmin ? [{ id: 'department-head', icon: Users, label: 'Department Heads' }] : []),
     { id: 'settings', icon: SettingsIcon, label: 'Settings' },
   ];
 

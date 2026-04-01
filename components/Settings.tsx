@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Department } from '../types';
 import { DEPARTMENTS } from '../constants';
-import { verifyAdminPassword } from '../services/database';
-import { Save, Lock, ShieldCheck, ShieldAlert, KeyRound, Shield, Eye, EyeOff, X, HelpCircle, Moon, Sun, Image as ImageIcon, LogIn, User as UserIcon } from 'lucide-react';
+import { verifyAdminPassword, verifyDepartmentPassword } from '../services/database';
+import { Save, Lock, ShieldCheck, ShieldAlert, KeyRound, Shield, Eye, EyeOff, X, HelpCircle, Moon, Sun, Image as ImageIcon } from 'lucide-react';
 
 interface SettingsProps {
   defaultDept: Department | null;
@@ -15,6 +15,7 @@ interface SettingsProps {
   onThemeToggle: (active: boolean) => void;
   bgConfig: { bgUrlDark?: string; bgUrlLight?: string };
   onUpdateBgConfig: (config: { bgUrlDark?: string; bgUrlLight?: string }) => void;
+  onLogout: () => void;
 }
 
 type VerifyingAction = 'save_settings' | 'activate_admin' | null;
@@ -28,7 +29,8 @@ export default function Settings({
   isDarkMode,
   onThemeToggle,
   bgConfig,
-  onUpdateBgConfig
+  onUpdateBgConfig,
+  onLogout
 }: SettingsProps) {
   const [selectedDept, setSelectedDept] = useState<Department | null>(defaultDept);
   const [password, setPassword] = useState('');
@@ -53,21 +55,30 @@ export default function Settings({
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const isValid = await verifyAdminPassword(password);
-      
-      if (isValid) {
-        if (verifyingAction === 'save_settings') {
+      if (verifyingAction === 'save_settings') {
+        const isAdminPass = await verifyAdminPassword(password);
+        const isDeptPass = selectedDept ? await verifyDepartmentPassword(selectedDept, password) : false;
+        
+        if (isAdminPass || isDeptPass) {
           onSave(selectedDept);
           setFeedback({ type: 'success', message: 'Preferences updated!' });
-        } else if (verifyingAction === 'activate_admin') {
+          setVerifyingAction(null);
+          setPassword('');
+          setTimeout(() => setFeedback(null), 3000);
+        } else {
+          setFeedback({ type: 'error', message: 'Unauthorized token.' });
+        }
+      } else if (verifyingAction === 'activate_admin') {
+        const isValid = await verifyAdminPassword(password);
+        if (isValid) {
           onAdminToggle(true);
           setFeedback({ type: 'success', message: 'Admin Access granted!' });
+          setVerifyingAction(null);
+          setPassword('');
+          setTimeout(() => setFeedback(null), 3000);
+        } else {
+          setFeedback({ type: 'error', message: 'Unauthorized token.' });
         }
-        setVerifyingAction(null);
-        setPassword('');
-        setTimeout(() => setFeedback(null), 3000);
-      } else {
-        setFeedback({ type: 'error', message: 'Unauthorized token.' });
       }
     } catch (error) {
       console.error(error);
@@ -160,6 +171,14 @@ export default function Settings({
 
           <div className="p-3 bg-stone-50 dark:bg-stone-950 rounded-xl border border-stone-100 dark:border-stone-800 flex items-center justify-between transition-colors">
             <div>
+              <h4 className="text-[10px] font-black text-stone-800 dark:text-stone-200 uppercase tracking-tight">Department Session</h4>
+              <p className="text-[8px] text-stone-500 dark:text-stone-400 font-medium italic">Exit current department</p>
+            </div>
+            <button onClick={onLogout} className="px-3 py-1.5 bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-stone-300 dark:hover:bg-stone-700 transition-colors">Exit</button>
+          </div>
+
+          <div className="p-3 bg-stone-50 dark:bg-stone-950 rounded-xl border border-stone-100 dark:border-stone-800 flex items-center justify-between transition-colors">
+            <div>
               <h4 className="text-[10px] font-black text-stone-800 dark:text-stone-200 uppercase tracking-tight">Elevated Controls</h4>
               <p className="text-[8px] text-stone-500 dark:text-stone-400 font-medium italic">Cross-departmental oversight</p>
             </div>
@@ -217,7 +236,9 @@ export default function Settings({
               <div className="flex items-center justify-between mb-0.5">
                 <div className="flex items-center gap-1.5">
                   <Lock size={12} />
-                  <span className="text-[9px] font-black uppercase tracking-widest">Verify Admin</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest">
+                    {verifyingAction === 'activate_admin' ? 'Verify Admin' : 'Verify Access'}
+                  </span>
                 </div>
                 <button type="button" onClick={() => setVerifyingAction(null)} className="p-1 hover:bg-white/10 rounded-full"><X size={12} /></button>
               </div>

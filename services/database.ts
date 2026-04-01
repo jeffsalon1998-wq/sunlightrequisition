@@ -430,3 +430,36 @@ export const verifyDepartmentPassword = async (dept: Department, password: strin
     return false;
   }
 };
+
+export const saveDepartmentPassword = async (dept: Department, password: string) => {
+  if (isUsingFallback || !dbClient) return;
+  try {
+    const key = dept === 'Purchasing' ? 'dept_pass_Admin' : `dept_pass_${dept}`;
+    await dbClient.execute({
+      sql: "INSERT OR REPLACE INTO app_config (key, value) VALUES (?, ?)",
+      args: [key, password]
+    });
+  } catch (error) {
+    console.error("Error saving department password:", error);
+    throw error;
+  }
+};
+
+export const getDepartmentPasswords = async (): Promise<Record<string, string>> => {
+  if (isUsingFallback || !dbClient) return {};
+  try {
+    const result = await dbClient.execute("SELECT key, value FROM app_config WHERE key LIKE 'dept_pass_%'");
+    const passwords: Record<string, string> = {};
+    result.rows.forEach(row => {
+      const key = String(row.key);
+      const dept = key.replace('dept_pass_', '');
+      // Map 'Admin' back to 'Purchasing' for the UI if needed, but let's keep it consistent
+      const displayDept = dept === 'Admin' ? 'Purchasing' : dept;
+      passwords[displayDept] = String(row.value);
+    });
+    return passwords;
+  } catch (error) {
+    console.error("Error fetching department passwords:", error);
+    return {};
+  }
+};
