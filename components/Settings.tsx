@@ -4,7 +4,6 @@ import { Department } from '../types';
 import { DEPARTMENTS } from '../constants';
 import { verifyAdminPassword } from '../services/database';
 import { Save, Lock, ShieldCheck, ShieldAlert, KeyRound, Shield, Eye, EyeOff, X, HelpCircle, Moon, Sun, Image as ImageIcon, LogIn, User as UserIcon } from 'lucide-react';
-import { User } from 'firebase/auth';
 
 interface SettingsProps {
   defaultDept: Department | null;
@@ -16,8 +15,6 @@ interface SettingsProps {
   onThemeToggle: (active: boolean) => void;
   bgConfig: { bgUrlDark?: string; bgUrlLight?: string };
   onUpdateBgConfig: (config: { bgUrlDark?: string; bgUrlLight?: string }) => void;
-  user: User | null;
-  onLogin: () => void;
 }
 
 type VerifyingAction = 'save_settings' | 'activate_admin' | null;
@@ -31,9 +28,7 @@ export default function Settings({
   isDarkMode,
   onThemeToggle,
   bgConfig,
-  onUpdateBgConfig,
-  user,
-  onLogin
+  onUpdateBgConfig
 }: SettingsProps) {
   const [selectedDept, setSelectedDept] = useState<Department | null>(defaultDept);
   const [password, setPassword] = useState('');
@@ -161,21 +156,6 @@ export default function Settings({
           </div>
 
           <div className="p-3 bg-stone-50 dark:bg-stone-950 rounded-xl border border-stone-100 dark:border-stone-800 flex items-center justify-between transition-colors">
-            <div>
-              <h4 className="text-[10px] font-black text-stone-800 dark:text-stone-200 uppercase tracking-tight">Cloud Sync</h4>
-              <p className="text-[8px] text-stone-500 dark:text-stone-400 font-medium italic">
-                {user ? `Logged in as ${user.email}` : 'Authenticate for cloud features'}
-              </p>
-            </div>
-            {user ? (
-              <div className="p-1.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
-                <UserIcon size={14} />
-              </div>
-            ) : (
-              <button onClick={onLogin} className="px-3 py-1.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 rounded-lg text-[9px] font-black uppercase tracking-wider hover:border-maroon-bg/50 dark:hover:border-gold-bg/50 hover:text-maroon-bg dark:hover:text-gold-text transition-all shadow-sm">
-                <LogIn size={12} className="inline mr-1" /> Login
-              </button>
-            )}
           </div>
 
           <div className="p-3 bg-stone-50 dark:bg-stone-950 rounded-xl border border-stone-100 dark:border-stone-800 flex items-center justify-between transition-colors">

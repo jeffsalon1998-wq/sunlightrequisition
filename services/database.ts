@@ -407,3 +407,26 @@ export const verifyAdminPassword = async (password: string): Promise<boolean> =>
     return password === (import.meta.env.VITE_ADMIN_PASSWORD || 'luxe123');
   }
 };
+
+export const verifyDepartmentPassword = async (dept: Department, password: string): Promise<boolean> => {
+  if (isUsingFallback || !dbClient) {
+    return false;
+  }
+  try {
+    // Map Purchasing to Admin as per user request
+    const key = dept === 'Purchasing' ? 'dept_pass_Admin' : `dept_pass_${dept}`;
+    
+    const result = await dbClient.execute({
+      sql: "SELECT value FROM app_config WHERE key = ?",
+      args: [key]
+    });
+    
+    if (result.rows.length > 0) {
+      return String(result.rows[0].value) === password;
+    }
+    return false;
+  } catch (error) {
+    console.error("Error verifying department password:", error);
+    return false;
+  }
+};

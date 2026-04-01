@@ -25,8 +25,6 @@ import { SunlightTextLogo } from './src/components/SunlightTextLogo';
 import { MaintenanceScreen } from './src/components/MaintenanceScreen';
 import { OfflineScreen } from './src/components/OfflineScreen';
 import { useDatabaseInit } from './src/hooks/useDatabaseInit';
-import { auth } from './src/firebase';
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { 
   saveRequisitionDb, 
   updateRequisitionDb, 
@@ -164,7 +162,6 @@ function AppContent() {
   const { theme, setTheme } = useTheme();
   const isDarkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-  const [user, setUser] = useState<User | null>(null);
   const [bgConfig, setBgConfig] = useState<{ bgUrlDark?: string; bgUrlLight?: string }>({
     bgUrlDark: import.meta.env.VITE_BG_URL_DARK || '',
     bgUrlLight: import.meta.env.VITE_BG_URL_LIGHT || 'https://i.ibb.co/FkH6MZVk/486295351-1190977103027465-6274870662942126036-n-1.jpg'
@@ -217,23 +214,6 @@ function AppContent() {
     loadBgConfig();
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const handleLogin = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      toast.success('Logged in successfully');
-    } catch (error) {
-      console.error('Login failed:', error);
-      toast.error('Login failed');
-    }
-  };
 
   const handleUpdateBgConfig = async (config: { bgUrlDark?: string; bgUrlLight?: string }) => {
     setBgConfig(config);
@@ -478,8 +458,6 @@ function AppContent() {
                   onThemeToggle={(active) => setTheme(active ? 'dark' : 'light')}
                   bgConfig={bgConfig}
                   onUpdateBgConfig={handleUpdateBgConfig}
-                  user={user}
-                  onLogin={handleLogin}
                 />
               )}
             </motion.div>
