@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, ClipboardList, Plus, Package, Settings as SettingsIcon, ChevronLeft, ChevronRight, Users } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Plus, Package, Settings as SettingsIcon, Menu, ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { SunlightTextLogo } from './SunlightTextLogo';
 import { motion } from 'framer-motion';
 

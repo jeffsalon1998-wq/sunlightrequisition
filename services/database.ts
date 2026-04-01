@@ -5,7 +5,7 @@ import { INITIAL_REQUISITIONS } from "../constants";
 
 // Database Credentials
 const getDbUrl = () => {
-  let url = import.meta.env.VITE_TURSO_DATABASE_URL;
+  let url = import.meta.env.VITE_STOCK_DB_URL;
   if (!url || url === 'undefined' || url === 'null' || url === '') return null;
   
   // Normalize libsql:// to https:// for browser fetch compatibility
@@ -22,7 +22,7 @@ const getDbUrl = () => {
 };
 
 const DB_URL = getDbUrl();
-const DB_TOKEN = import.meta.env.VITE_TURSO_AUTH_TOKEN;
+const DB_TOKEN = import.meta.env.VITE_STOCK_DB_TOKEN;
 
 // Fallback mechanism for when the database is unreachable
 let isUsingFallback = !DB_URL;

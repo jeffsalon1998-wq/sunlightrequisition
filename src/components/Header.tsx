@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cloud, Bell, RefreshCw, Moon, Sun, CheckCircle2, PenTool } from 'lucide-react';
+import { Search, Cloud, Bell, RefreshCw, Moon, Sun, CheckCircle2, PenTool } from 'lucide-react';
 import { Department, Requisition } from '../../types';
 import { useTheme } from './ThemeProvider';
 import { AnimatePresence, motion } from 'framer-motion';
