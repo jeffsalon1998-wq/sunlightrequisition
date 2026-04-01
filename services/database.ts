@@ -4,12 +4,25 @@ import { InventoryItem, Requisition, Department } from "../types";
 import { INITIAL_REQUISITIONS } from "../constants";
 
 // Database Credentials
-// Hardcoded as requested by user - WARNING: This is a security risk
-const DB_URL = "https://warehousekimi-vercel-icfg-tf7wnf43zngjwvbur4t9rp6n.aws-us-east-1.turso.io";
-const DB_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzUwMzc2NzIsImlkIjoiMDE5Y2E3OGUtNDgwMS03OWU1LWE5YzUtYWJhY2I3OTI3YzEwIiwicmlkIjoiNDBlYjZkNTMtYWVlYi00NDQ3LWE3OGYtNDA3ZTZlOTkxM2U2In0.t9JpuUguomy0WVAp1HzPnsE3b46qAbMiS4ocV2g2lZVhf1pmA28Wm6sFyYHVbXsdZcFOR7IPhbaRxEgi9BE5Bg";
+const getDbUrl = () => {
+  let url = import.meta.env.VITE_TURSO_DATABASE_URL;
+  if (!url || url === 'undefined' || url === 'null' || url === '') return null;
+  
+  // Normalize libsql:// to https:// for browser fetch compatibility
+  if (url.startsWith("libsql://")) {
+    url = url.replace("libsql://", "https://");
+  }
+  
+  // Ensure it has a protocol
+  if (!url.includes("://")) {
+    url = "https://" + url;
+  }
+  
+  return url;
+};
 
-// Hardcoded Device ID for department verification
-export const DEVICE_ID = 'device_001';
+const DB_URL = getDbUrl();
+const DB_TOKEN = import.meta.env.VITE_TURSO_AUTH_TOKEN;
 
 // Fallback mechanism for when the database is unreachable
 let isUsingFallback = !DB_URL;
@@ -181,67 +194,9 @@ export const initDatabase = async () => {
   }
 };
 
-export const registerDeviceDepartment = async (department: string) => {
-  await saveConfig(`device_dept_${DEVICE_ID}`, department);
-};
-
-export const getDeviceDepartment = async (): Promise<string | null> => {
-  return await getConfig(`device_dept_${DEVICE_ID}`);
-};
-
-export const saveDepartmentPassword = async (department: string, password: string) => {
-  if (!connectionTested) await initDatabase();
-  if (isUsingFallback || !dbClient) {
-    localStorage.setItem(`sunlight_dept_pass_${department}`, password);
-    return;
-  }
-  try {
-    await dbClient.execute({
-      sql: "INSERT OR REPLACE INTO app_config (key, value) VALUES (?, ?)",
-      args: [`dept_pass_${department}`, password]
-    });
-  } catch (error) {
-    console.error("Error saving department password:", error);
-    localStorage.setItem(`sunlight_dept_pass_${department}`, password);
-  }
-};
-
-export const verifyDepartmentPassword = async (department: string, password: string): Promise<boolean> => {
-  if (!connectionTested) await initDatabase();
-  if (isUsingFallback || !dbClient) {
-    const saved = localStorage.getItem(`sunlight_dept_pass_${department}`);
-    return saved === password;
-  }
-  try {
-    const result = await dbClient.execute({
-      sql: "SELECT value FROM app_config WHERE key = ?",
-      args: [`dept_pass_${department}`]
-    });
-    if (result.rows.length > 0) {
-      return String(result.rows[0].value) === password;
-    }
-    return false;
-  } catch (error) {
-    console.error("Error verifying department password:", error);
-    const saved = localStorage.getItem(`sunlight_dept_pass_${department}`);
-    return saved === password;
-  }
-};
-
 export const getDepartmentsFromConfig = async (): Promise<Department[]> => {
   if (!connectionTested) await initDatabase();
-  if (isUsingFallback || !dbClient) {
-    const saved = localStorage.getItem('sunlight_config_system_config');
-    if (saved) {
-      try {
-        const config = JSON.parse(saved);
-        if (config.departments && Array.isArray(config.departments)) {
-          return config.departments as Department[];
-        }
-      } catch (e) {}
-    }
-    return [];
-  }
+  if (isUsingFallback || !dbClient) return [];
   try {
     const result = await dbClient.execute("SELECT value_json FROM config WHERE key = 'system_config'");
     if (result.rows.length > 0) {
@@ -256,25 +211,12 @@ export const getDepartmentsFromConfig = async (): Promise<Department[]> => {
     if (!(error instanceof Error && error.message.includes('fetch'))) {
       console.error("Error fetching departments from config:", error);
     }
-    const saved = localStorage.getItem('sunlight_config_system_config');
-    if (saved) {
-      try {
-        const config = JSON.parse(saved);
-        if (config.departments && Array.isArray(config.departments)) {
-          return config.departments as Department[];
-        }
-      } catch (e) {}
-    }
     return [];
   }
 };
 
 export const saveConfig = async (key: string, value: any) => {
-  if (!connectionTested) await initDatabase();
-  if (isUsingFallback || !dbClient) {
-    localStorage.setItem(`sunlight_config_${key}`, JSON.stringify(value));
-    return;
-  }
+  if (isUsingFallback || !dbClient) return;
   try {
     await dbClient.execute({
       sql: "INSERT OR REPLACE INTO config (key, value_json) VALUES (?, ?)",
@@ -282,16 +224,11 @@ export const saveConfig = async (key: string, value: any) => {
     });
   } catch (error) {
     console.error("Error saving config:", error);
-    localStorage.setItem(`sunlight_config_${key}`, JSON.stringify(value));
   }
 };
 
 export const getConfig = async (key: string): Promise<any | null> => {
-  if (!connectionTested) await initDatabase();
-  if (isUsingFallback || !dbClient) {
-    const saved = localStorage.getItem(`sunlight_config_${key}`);
-    return saved ? JSON.parse(saved) : null;
-  }
+  if (isUsingFallback || !dbClient) return null;
   try {
     const result = await dbClient.execute({
       sql: "SELECT value_json FROM config WHERE key = ?",
@@ -303,8 +240,7 @@ export const getConfig = async (key: string): Promise<any | null> => {
     return null;
   } catch (error) {
     console.error("Error fetching config:", error);
-    const saved = localStorage.getItem(`sunlight_config_${key}`);
-    return saved ? JSON.parse(saved) : null;
+    return null;
   }
 };
 
@@ -453,7 +389,6 @@ export const updateStatusDb = async (id: string, status: string, reason?: string
 };
 
 export const verifyAdminPassword = async (password: string): Promise<boolean> => {
-  if (!connectionTested) await initDatabase();
   if (isUsingFallback || !dbClient) {
     return password === (import.meta.env.VITE_ADMIN_PASSWORD || 'luxe123');
   }

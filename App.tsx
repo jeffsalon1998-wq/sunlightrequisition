@@ -132,7 +132,9 @@ function AppContent() {
 
 
 
-  const [defaultDept, setDefaultDept] = useState<Department | null>(null);
+  const [defaultDept, setDefaultDept] = useState<Department | null>(() => {
+    return localStorage.getItem('sunlight_default_dept') as Department | null;
+  });
   const [deptPassword, setDeptPassword] = useState('');
   const [isDeptAuthenticated, setIsDeptAuthenticated] = useState(() => {
     const authData = localStorage.getItem('sunlight_dept_auth');
