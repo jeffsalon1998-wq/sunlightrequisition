@@ -414,7 +414,7 @@ export const updateStatusDb = async (id: string, status: string, reason?: string
 
 export const verifyAdminPassword = async (password: string): Promise<boolean> => {
   if (isUsingFallback || !dbClient) {
-    return password === (process.env.VITE_ADMIN_PASSWORD || 'luxe123');
+    return password === (import.meta.env.VITE_ADMIN_PASSWORD || 'luxe123');
   }
   try {
     const result = await dbClient.execute({
@@ -425,9 +425,9 @@ export const verifyAdminPassword = async (password: string): Promise<boolean> =>
     if (result.rows.length > 0) {
       return String(result.rows[0].value) === password;
     }
-    return password === (process.env.VITE_ADMIN_PASSWORD || 'luxe123'); // Fallback
+    return password === (import.meta.env.VITE_ADMIN_PASSWORD || 'luxe123'); // Fallback
   } catch (error) {
     console.error("Error verifying password:", error);
-    return password === (process.env.VITE_ADMIN_PASSWORD || 'luxe123');
+    return password === (import.meta.env.VITE_ADMIN_PASSWORD || 'luxe123');
   }
 };
