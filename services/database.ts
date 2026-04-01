@@ -4,25 +4,9 @@ import { InventoryItem, Requisition, Department } from "../types";
 import { INITIAL_REQUISITIONS } from "../constants";
 
 // Database Credentials
-const getDbUrl = () => {
-  let url = import.meta.env.VITE_STOCK_DB_URL;
-  if (!url || url === 'undefined' || url === 'null' || url === '') return null;
-  
-  // Normalize libsql:// to https:// for browser fetch compatibility
-  if (url.startsWith("libsql://")) {
-    url = url.replace("libsql://", "https://");
-  }
-  
-  // Ensure it has a protocol
-  if (!url.includes("://")) {
-    url = "https://" + url;
-  }
-  
-  return url;
-};
-
-const DB_URL = getDbUrl();
-const DB_TOKEN = import.meta.env.VITE_STOCK_DB_TOKEN;
+// Hardcoded as requested by user - WARNING: This is a security risk
+const DB_URL = "https://warehousekimi-vercel-icfg-tf7wnf43zngjwvbur4t9rp6n.aws-us-east-1.turso.io";
+const DB_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzUwMzc2NzIsImlkIjoiMDE5Y2E3OGUtNDgwMS03OWU1LWE5YzUtYWJhY2I3OTI3YzEwIiwicmlkIjoiNDBlYjZkNTMtYWVlYi00NDQ3LWE3OGYtNDA3ZTZlOTkxM2U2In0.t9JpuUguomy0WVAp1HzPnsE3b46qAbMiS4ocV2g2lZVhf1pmA28Wm6sFyYHVbXsdZcFOR7IPhbaRxEgi9BE5Bg";
 
 // Fallback mechanism for when the database is unreachable
 let isUsingFallback = !DB_URL;

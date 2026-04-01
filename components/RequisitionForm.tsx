@@ -183,6 +183,25 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, onUpdate, i
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const deptCode = getDepartmentCode(department);
       
+      // Find existing pending requisition
+      const existingPending = requisitions.find(r => 
+        r.department === department && 
+        r.requester.toLowerCase() === requester.toLowerCase() && 
+        r.status === 'Pending' &&
+        r.remarks === remarks &&
+        (r.prFor || 'Local') === prFor
+      );
+
+      if (existingPending) {
+        // Add items to existingPending
+        const updatedItems = [...existingPending.items, ...items];
+        const updatedReq = { ...existingPending, items: updatedItems };
+        onUpdate(updatedReq);
+        toast.success('Items added to existing requisition');
+        setIsSubmitting(false);
+        return;
+      }
+
       // Find the maximum sequence number for this department in this month
       const deptRequisitions = requisitions.filter(r => {
         if (r.department !== department) return false;
@@ -233,43 +252,11 @@ const RequisitionForm: React.FC<RequisitionFormProps> = ({ onSubmit, onUpdate, i
       };
 
       if (warehouseItems.length > 0) {
-        const existingWarehousePending = requisitions.find(r => 
-          r.department === department && 
-          r.requester.toLowerCase() === requester.toLowerCase() && 
-          r.status === 'Pending' &&
-          r.remarks === remarks &&
-          r.prFor === prFor &&
-          r.items.every(i => i.source === 'Warehouse')
-        );
-
-        if (existingWarehousePending) {
-          const updatedItems = [...existingWarehousePending.items, ...warehouseItems];
-          const updatedReq = { ...existingWarehousePending, items: updatedItems };
-          onUpdate(updatedReq);
-          toast.success('Warehouse items added to existing requisition');
-        } else {
-          createAndSubmit(warehouseItems);
-        }
+        createAndSubmit(warehouseItems);
       }
 
       if (purchaseItems.length > 0) {
-        const existingPurchasePending = requisitions.find(r => 
-          r.department === department && 
-          r.requester.toLowerCase() === requester.toLowerCase() && 
-          r.status === 'Pending' &&
-          r.remarks === remarks &&
-          r.prFor === prFor &&
-          r.items.every(i => i.source === 'Purchase')
-        );
-
-        if (existingPurchasePending) {
-          const updatedItems = [...existingPurchasePending.items, ...purchaseItems];
-          const updatedReq = { ...existingPurchasePending, items: updatedItems };
-          onUpdate(updatedReq);
-          toast.success('Purchase items added to existing requisition');
-        } else {
-          createAndSubmit(purchaseItems);
-        }
+        createAndSubmit(purchaseItems);
       }
     } catch (error) {
       toast.error("Failed to submit requisition");
