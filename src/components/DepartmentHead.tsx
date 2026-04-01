@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 interface DepartmentHeadProps {
   availableDepartments: string[];

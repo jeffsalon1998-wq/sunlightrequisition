@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { Department } from '../types';
 import { DEPARTMENTS } from '../constants';
-import { verifyAdminPassword } from '../services/database';
-import { Save, Lock, ShieldCheck, ShieldAlert, KeyRound, Shield, Eye, EyeOff, X, HelpCircle, Moon, Sun, Image as ImageIcon, LogIn, User as UserIcon } from 'lucide-react';
+import { verifyAdminPassword, saveDepartmentPassword } from '../services/database';
+import { Save, Lock, ShieldCheck, ShieldAlert, KeyRound, Shield, Eye, EyeOff, X, HelpCircle, Moon, Sun, Image as ImageIcon, LogIn, User as UserIcon, RefreshCw } from 'lucide-react';
 import { User } from 'firebase/auth';
+import { toast } from 'sonner';
 
 interface SettingsProps {
   defaultDept: Department | null;
@@ -20,7 +21,7 @@ interface SettingsProps {
   onLogin: () => void;
 }
 
-type VerifyingAction = 'save_settings' | 'activate_admin' | null;
+type VerifyingAction = 'save_settings' | 'activate_admin' | 'set_dept_password' | null;
 
 export default function Settings({ 
   defaultDept, 
@@ -43,11 +44,23 @@ export default function Settings({
 
   const [bgDark, setBgDark] = useState(bgConfig.bgUrlDark || '');
   const [bgLight, setBgLight] = useState(bgConfig.bgUrlLight || '');
+  
+  const [deptToSetPass, setDeptToSetPass] = useState<Department | ''>('');
+  const [newDeptPass, setNewDeptPass] = useState('');
 
   useEffect(() => {
     setBgDark(bgConfig.bgUrlDark || '');
     setBgLight(bgConfig.bgUrlLight || '');
   }, [bgConfig]);
+
+  const generateRandomPassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let result = '';
+    for (let i = 0; i < 12; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setNewDeptPass(result);
+  };
 
   const startVerification = (action: VerifyingAction) => {
     setVerifyingAction(action);
@@ -67,6 +80,13 @@ export default function Settings({
         } else if (verifyingAction === 'activate_admin') {
           onAdminToggle(true);
           setFeedback({ type: 'success', message: 'Admin Access granted!' });
+        } else if (verifyingAction === 'set_dept_password') {
+          if (deptToSetPass && newDeptPass) {
+            await saveDepartmentPassword(deptToSetPass, newDeptPass);
+            toast.success(`Password set for ${deptToSetPass}`);
+            setDeptToSetPass('');
+            setNewDeptPass('');
+          }
         }
         setVerifyingAction(null);
         setPassword('');
@@ -192,6 +212,48 @@ export default function Settings({
             )}
           </div>
         </section>
+
+        {defaultDept === 'Purchasing' && (
+          <section className="space-y-3 pt-3 border-t border-stone-50 dark:border-stone-800">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-1 h-4 maroon-bg rounded-full"></div>
+              <h3 className="text-[9px] font-black text-stone-900 dark:text-stone-100 uppercase tracking-[0.2em]">Department Access</h3>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[8px] font-black text-stone-400 uppercase mb-1 ml-1 tracking-wider">Select Department</label>
+                <select 
+                  value={deptToSetPass} 
+                  onChange={e => setDeptToSetPass(e.target.value as Department)}
+                  className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-3 py-2 rounded-lg text-[10px] font-bold focus:ring-2 focus:ring-maroon-bg/20 outline-none transition-all"
+                >
+                  <option value="">Select...</option>
+                  {availableDepartments.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+              <div className="relative">
+                <label className="block text-[8px] font-black text-stone-400 uppercase mb-1 ml-1 tracking-wider">Password</label>
+                <input 
+                  type="text" 
+                  value={newDeptPass}
+                  onChange={e => setNewDeptPass(e.target.value)}
+                  placeholder="Password..."
+                  className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 px-3 py-2 rounded-lg text-[10px] font-bold focus:ring-2 focus:ring-maroon-bg/20 outline-none transition-all"
+                />
+                <button type="button" onClick={generateRandomPassword} className="absolute right-2 top-7 p-1 text-stone-400 hover:text-maroon-bg">
+                  <RefreshCw size={12} />
+                </button>
+              </div>
+              <button 
+                onClick={() => startVerification('set_dept_password')}
+                className="w-full py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-black dark:hover:bg-white transition-all flex items-center justify-center gap-2"
+              >
+                <Lock size={12} /> Set Password
+              </button>
+            </div>
+          </section>
+        )}
 
         {defaultDept === 'Purchasing' && (
           <section className="space-y-3 pt-3 border-t border-stone-50 dark:border-stone-800">

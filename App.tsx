@@ -32,7 +32,11 @@ import {
   updateRequisitionDb, 
   updateStatusDb,
   saveConfig,
-  getConfig
+  getConfig,
+  getDeviceDepartment,
+  registerDeviceDepartment,
+  verifyDepartmentPassword,
+  verifyAdminPassword
 } from './services/database';
 import { Toaster, toast } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -128,11 +132,9 @@ function AppContent() {
 
 
 
-  // DEFAULT DEPARTMENT SET TO NULL (BLANK)
-  const [defaultDept, setDefaultDept] = useState<Department | null>(() => {
-    const saved = localStorage.getItem('sunlight_default_dept');
-    return saved ? (saved as Department) : null;
-  });
+  const [defaultDept, setDefaultDept] = useState<Department | null>(null);
+  const [deptPassword, setDeptPassword] = useState('');
+  const [isDeptAuthenticated, setIsDeptAuthenticated] = useState(false);
   const [isManualAdmin, setIsManualAdmin] = useState<boolean>(() => {
     const saved = localStorage.getItem('sunlight_is_admin');
     return saved === 'true';
@@ -146,6 +148,7 @@ function AppContent() {
   useEffect(() => {
     if (defaultDept) {
       localStorage.setItem('sunlight_default_dept', defaultDept);
+      registerDeviceDepartment(defaultDept);
     } else {
       localStorage.removeItem('sunlight_default_dept');
     }
@@ -178,7 +181,19 @@ function AppContent() {
         setDepartmentHeads(saved);
       }
     };
+    const loadDept = async () => {
+      const dbDept = await getDeviceDepartment();
+      if (dbDept) {
+        setDefaultDept(dbDept as Department);
+      } else {
+        const saved = localStorage.getItem('sunlight_default_dept');
+        if (saved) {
+          setDefaultDept(saved as Department);
+        }
+      }
+    };
     loadDeptHeads();
+    loadDept();
   }, []);
 
   useEffect(() => {
@@ -386,12 +401,62 @@ function AppContent() {
 
 
 
+  const handleDeptLogin = async (dept: Department, pass: string) => {
+    let isValid = false;
+    if (dept === 'Purchasing') {
+      isValid = await verifyAdminPassword(pass);
+    } else {
+      isValid = await verifyDepartmentPassword(dept, pass);
+    }
+    
+    if (isValid) {
+      setDefaultDept(dept);
+      setIsDeptAuthenticated(true);
+      toast.success(`Logged into ${dept}`);
+    } else {
+      toast.error('Invalid password');
+    }
+  };
+
   if (!isOnline) {
     return <OfflineScreen />;
   }
 
   if (isLoading) {
     return <LoadingScreen />;
+  }
+
+  if (!defaultDept || !isDeptAuthenticated) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-[#1a0000] flex flex-col items-center justify-center p-6 text-center">
+        <h2 className="text-xl font-bold text-white mb-6">Select Department</h2>
+        <div className="w-full max-w-sm space-y-4">
+          <select 
+            onChange={e => {
+              const dept = e.target.value as Department;
+              setDefaultDept(dept);
+            }}
+            className="w-full bg-stone-900 border border-stone-700 px-4 py-3 rounded-xl text-white outline-none"
+          >
+            <option value="">Select Department...</option>
+            {availableDepartments.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <input 
+            type="password" 
+            placeholder="Password" 
+            value={deptPassword}
+            onChange={e => setDeptPassword(e.target.value)}
+            className="w-full bg-stone-900 border border-stone-700 px-4 py-3 rounded-xl text-white outline-none"
+          />
+          <button 
+            onClick={() => defaultDept && handleDeptLogin(defaultDept, deptPassword)}
+            className="w-full py-3 bg-gold-bg text-stone-900 font-bold rounded-xl"
+          >
+            Login
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (error) {

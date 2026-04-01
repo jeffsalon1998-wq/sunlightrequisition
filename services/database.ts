@@ -8,6 +8,9 @@ import { INITIAL_REQUISITIONS } from "../constants";
 const DB_URL = "https://warehousekimi-vercel-icfg-tf7wnf43zngjwvbur4t9rp6n.aws-us-east-1.turso.io";
 const DB_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzUwMzc2NzIsImlkIjoiMDE5Y2E3OGUtNDgwMS03OWU1LWE5YzUtYWJhY2I3OTI3YzEwIiwicmlkIjoiNDBlYjZkNTMtYWVlYi00NDQ3LWE3OGYtNDA3ZTZlOTkxM2U2In0.t9JpuUguomy0WVAp1HzPnsE3b46qAbMiS4ocV2g2lZVhf1pmA28Wm6sFyYHVbXsdZcFOR7IPhbaRxEgi9BE5Bg";
 
+// Hardcoded Device ID for department verification
+export const DEVICE_ID = 'device_001';
+
 // Fallback mechanism for when the database is unreachable
 let isUsingFallback = !DB_URL;
 let connectionTested = false;
@@ -175,6 +178,43 @@ export const initDatabase = async () => {
     isUsingFallback = true;
   } finally {
     connectionTested = true;
+  }
+};
+
+export const registerDeviceDepartment = async (department: string) => {
+  await saveConfig(`device_dept_${DEVICE_ID}`, department);
+};
+
+export const getDeviceDepartment = async (): Promise<string | null> => {
+  return await getConfig(`device_dept_${DEVICE_ID}`);
+};
+
+export const saveDepartmentPassword = async (department: string, password: string) => {
+  if (isUsingFallback || !dbClient) return;
+  try {
+    await dbClient.execute({
+      sql: "INSERT OR REPLACE INTO app_config (key, value) VALUES (?, ?)",
+      args: [`dept_pass_${department}`, password]
+    });
+  } catch (error) {
+    console.error("Error saving department password:", error);
+  }
+};
+
+export const verifyDepartmentPassword = async (department: string, password: string): Promise<boolean> => {
+  if (isUsingFallback || !dbClient) return false;
+  try {
+    const result = await dbClient.execute({
+      sql: "SELECT value FROM app_config WHERE key = ?",
+      args: [`dept_pass_${department}`]
+    });
+    if (result.rows.length > 0) {
+      return String(result.rows[0].value) === password;
+    }
+    return false;
+  } catch (error) {
+    console.error("Error verifying department password:", error);
+    return false;
   }
 };
 
@@ -374,7 +414,7 @@ export const updateStatusDb = async (id: string, status: string, reason?: string
 
 export const verifyAdminPassword = async (password: string): Promise<boolean> => {
   if (isUsingFallback || !dbClient) {
-    return password === (import.meta.env.VITE_ADMIN_PASSWORD || 'luxe123');
+    return password === (process.env.VITE_ADMIN_PASSWORD || 'luxe123');
   }
   try {
     const result = await dbClient.execute({
@@ -385,9 +425,9 @@ export const verifyAdminPassword = async (password: string): Promise<boolean> =>
     if (result.rows.length > 0) {
       return String(result.rows[0].value) === password;
     }
-    return password === (import.meta.env.VITE_ADMIN_PASSWORD || 'luxe123'); // Fallback
+    return password === (process.env.VITE_ADMIN_PASSWORD || 'luxe123'); // Fallback
   } catch (error) {
     console.error("Error verifying password:", error);
-    return password === (import.meta.env.VITE_ADMIN_PASSWORD || 'luxe123');
+    return password === (process.env.VITE_ADMIN_PASSWORD || 'luxe123');
   }
 };

@@ -2,8 +2,9 @@
 import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { InventoryItem, Requisition, Department } from '../types';
-import { Clock, Truck, PenTool, CheckCircle2 } from 'lucide-react';
+import { Clock, Truck, PenTool, CheckCircle2, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 interface DashboardProps {
   inventory: InventoryItem[];
@@ -16,6 +17,21 @@ const Dashboard: React.FC<DashboardProps> = ({ inventory, requisitions, defaultD
   const currentMonthName = useMemo(() => {
     return new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
   }, []);
+
+  const handleBackup = () => {
+    try {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(requisitions, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `requisitions_backup_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+      toast.success('Backup downloaded successfully');
+    } catch (error) {
+      toast.error('Failed to backup data');
+    }
+  };
 
   // Filter requisitions for the current month
   const monthlyRequisitions = useMemo(() => {
@@ -95,10 +111,19 @@ const Dashboard: React.FC<DashboardProps> = ({ inventory, requisitions, defaultD
         >
           <h2 className="text-2xl md:text-3xl font-bold text-stone-900 dark:text-stone-100 tracking-tight [text-shadow:0_1px_2px_rgba(255,255,255,0.5)]">Operations Hub</h2>
         </motion.div>
-        <button className="hidden md:flex items-center gap-2 text-[10px] text-stone-500 dark:text-stone-400 font-black uppercase tracking-widest bg-white/80 dark:bg-stone-900/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-stone-200/50 dark:border-stone-800/50 shadow-sm hover:border-stone-300 dark:hover:border-stone-700 transition-colors">
-          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-          Live Feed
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={handleBackup}
+            className="flex items-center gap-2 text-[10px] text-stone-700 dark:text-stone-300 font-black uppercase tracking-widest bg-white/80 dark:bg-stone-900/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-stone-200/50 dark:border-stone-800/50 shadow-sm hover:border-stone-300 dark:hover:border-stone-700 transition-colors"
+          >
+            <Download size={12} />
+            Backup Data
+          </button>
+          <button className="hidden md:flex items-center gap-2 text-[10px] text-stone-500 dark:text-stone-400 font-black uppercase tracking-widest bg-white/80 dark:bg-stone-900/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-stone-200/50 dark:border-stone-800/50 shadow-sm hover:border-stone-300 dark:hover:border-stone-700 transition-colors">
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+            Live Feed
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
